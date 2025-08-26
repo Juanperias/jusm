@@ -1,6 +1,6 @@
 use std::ops::RangeBounds;
 
-use crate::token::Token;
+use crate::parser::token::Token;
 
 pub fn check_is_reg(reg: &Token) -> bool {
     (Token::Zero..=Token::A0).contains(reg)

@@ -2,14 +2,13 @@
 
 use logos::Logos;
 
-use crate::{
+use crate::parser::{
     ast::{AstNode, nodes_from_tokens},
     token::Token,
 };
 
-mod ast;
+mod parser;
 mod riscv;
-mod token;
 mod utils;
 
 fn main() {
