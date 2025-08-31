@@ -2,6 +2,6 @@
 
 use crate::parser::ast::AstNode;
 
-pub fn decode(nodes: Vec<AstNode>) -> Vec<u8> {
+pub fn encode(nodes: Vec<AstNode>) -> Vec<u8> {
     Vec::new()
 }
