@@ -34,9 +34,8 @@ impl<'a> Elf<'a> {
         );
     }
     pub fn create_symbol(&mut self) {}
-    pub fn reallocate(&mut self) {
-        
-    }
+
+    pub fn reallocate(&mut self) {}
     pub fn write(&self, path: &Path) {
         let mut file = File::open(path).unwrap();
         let content = self.elf.write().unwrap();

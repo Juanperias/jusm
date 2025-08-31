@@ -25,7 +25,15 @@ pub enum Token {
     })]
     NegNumber(i64),
 
+    #[token("section")]
+    Section,
+
     // i think this is broken
     #[regex(";(.*)")]
     Comment,
+
+    #[regex("(.*)", |lex| {
+        lex.slice().to_string()
+    })]
+    Name(String),
 }
