@@ -21,3 +21,13 @@ pub fn encode(node: AstNode) -> Vec<u8> {
         }),
     }
 }
+
+pub fn encode_nodes(nodes: Vec<AstNode>) -> Vec<u8> {
+    let mut output = Vec::new();
+
+    for node in nodes {
+        output.extend(encode(node));
+    }
+
+    output
+}
