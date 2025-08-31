@@ -1,4 +1,4 @@
-use std::collections::HashMap;
+use std::{collections::HashMap, fs::File, io::Write, path::Path};
 
 use object::{
     Architecture, BinaryFormat, Endianness, SectionKind,
@@ -32,6 +32,11 @@ impl<'a> Elf<'a> {
                 symbol_table: HashMap::new(),
             },
         );
+    }
+    pub fn write(&self, path: &Path) {
+        let mut file = File::open(path).unwrap();
+        let content = self.elf.write().unwrap();
+        file.write_all(&content).unwrap();
     }
 }
 

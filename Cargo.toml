@@ -5,4 +5,5 @@ edition = "2024"
 
 [dependencies]
 logos = "0.15.1"
+object = { version = "0.37.3", features = ["write"] }
 thiserror = "2.0.16"
