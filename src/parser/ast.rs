@@ -2,7 +2,7 @@ use super::token::Token;
 use crate::utils::{check_is_reg, check_num, token_to_reg};
 use logos::Lexer;
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub enum AstNode {
     Addi { rd: u32, rs1: u32, imm: u64 },
     Ecall,

@@ -9,6 +9,7 @@ pub fn check_is_reg(reg: &Token) -> bool {
 pub fn check_num(reg: &Token) -> u64 {
     match reg {
         Token::Number(n) => *n,
+        Token::NegNumber(n) => *n as u64,
         _ => panic!("Expected number"),
     }
 }

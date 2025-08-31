@@ -20,6 +20,11 @@ pub enum Token {
     })]
     Number(u64),
 
+    #[regex(r"-\d+", |lex| {
+        lex.slice().trim().parse::<i64>().expect("Invalid number")
+    })]
+    NegNumber(i64),
+
     // i think this is broken
     #[regex(";(.*)")]
     Comment,
