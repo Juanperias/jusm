@@ -7,6 +7,7 @@ use crate::parser::{
     token::Token,
 };
 
+mod elf;
 mod parser;
 mod riscv;
 mod utils;

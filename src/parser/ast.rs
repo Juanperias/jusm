@@ -1,7 +1,6 @@
-use logos::Lexer;
-
 use super::token::Token;
 use crate::utils::{check_is_reg, check_num, token_to_reg};
+use logos::Lexer;
 
 #[derive(Debug)]
 pub enum AstNode {
