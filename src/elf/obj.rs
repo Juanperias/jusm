@@ -38,6 +38,9 @@ impl<'a> Elf<'a> {
     pub fn write_section(&mut self, id: SectionId, content: &[u8], align: u64) {
         self.elf.section_mut(id).append_data(content, align);
     }
+    pub fn search_section(&self, name: String) -> &Section {
+        self.sections.get(&name).expect("Invalid section")
+    }
     pub fn create_symbol(&mut self) {}
     pub fn reallocate(&mut self) {}
     pub fn write(&self, path: &Path) {
