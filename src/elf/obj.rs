@@ -17,7 +17,7 @@ impl<'a> Elf<'a> {
             elf: Object::new(BinaryFormat::Elf, Architecture::Riscv64, Endianness::Little),
         }
     }
-    pub fn create_section(&mut self, name: String, kind: SectionKind) {
+    pub fn create_section(&mut self, name: String, kind: SectionKind) -> SectionId {
         let id = self
             .elf
             .add_section(vec![], name.as_str().as_bytes().to_vec(), kind);
@@ -32,12 +32,16 @@ impl<'a> Elf<'a> {
                 symbol_table: HashMap::new(),
             },
         );
+
+        id
+    }
+    pub fn write_section(&mut self, id: SectionId, content: &[u8], align: u64) {
+        self.elf.section_mut(id).append_data(content, align);
     }
     pub fn create_symbol(&mut self) {}
-
     pub fn reallocate(&mut self) {}
     pub fn write(&self, path: &Path) {
-        let mut file = File::open(path).unwrap();
+        let mut file = File::create(path).unwrap();
         let content = self.elf.write().unwrap();
         file.write_all(&content).unwrap();
     }

@@ -12,6 +12,9 @@ pub enum Token {
     #[token("zero")]
     Zero,
 
+    #[token("a7")]
+    A7,
+
     #[token("a0")]
     A0,
 
