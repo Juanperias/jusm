@@ -13,9 +13,10 @@ mod riscv;
 mod utils;
 
 fn main() {
-    let mut t = Token::lexer("section .text\naddi a0, zero, -20\necall");
+    let mut t = Token::lexer(include_str!("../main.S"));
 
     let nodes = nodes_from_tokens(&mut t);
+    println!("{:?}", nodes);
     let opcodes = riscv::encode_nodes(nodes);
     println!("{:?}", opcodes);
 }

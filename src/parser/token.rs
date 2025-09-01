@@ -32,8 +32,6 @@ pub enum Token {
     #[regex(";(.*)")]
     Comment,
 
-    #[regex("(.*)", |lex| {
-        lex.slice().to_string()
-    })]
+    #[regex(r"\..*", |lex| lex.slice().to_string())]
     Name(String),
 }

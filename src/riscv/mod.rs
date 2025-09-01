@@ -19,6 +19,7 @@ pub fn encode(node: AstNode) -> Vec<u8> {
             rd,
             opcode: 0b0010011,
         }),
+        AstNode::Section { .. } => Vec::new(),
     }
 }
 
