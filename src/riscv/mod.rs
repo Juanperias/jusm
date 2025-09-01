@@ -21,7 +21,7 @@ pub fn encode(node: AstNode) -> Vec<u8> {
             rd,
             opcode: 0b0010011,
         }),
-        AstNode::Section { .. } => Vec::new(),
+        _ => Vec::new(),
     }
 }
 
@@ -36,16 +36,16 @@ pub fn encode_sections(sections: Vec<AstNode>, elf: &mut Elf) {
                     other => (other, SectionKind::Unknown),
                 };
 
-                let id = elf.create_section(opts.0.to_string(), opts.1);
+                let section = elf.create_section(opts.0.to_string(), opts.1);
                 let mut opcodes = Vec::new();
 
                 for node in content {
-                    opcodes.extend(encode(node));    
+                    opcodes.extend(encode(node));
                 }
 
-                elf.write_section(id, &opcodes, 4);
-            },
-            _ => {},
+                elf.write_section(section.id, &opcodes, 4);
+            }
+            _ => {}
         }
     }
 }

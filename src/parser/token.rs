@@ -35,6 +35,11 @@ pub enum Token {
     #[regex(";(.*)")]
     Comment,
 
+    #[regex(r"[A-Za-z_][A-Za-z0-9_]*:", |lex| {
+        lex.slice().replace(":", "").to_string()
+    })]
+    Label(String),
+
     #[regex(r"\..*", |lex| lex.slice().to_string())]
     Name(String),
 }

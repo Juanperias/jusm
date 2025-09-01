@@ -5,6 +5,7 @@ use logos::Lexer;
 #[derive(Debug, Clone)]
 pub enum AstNode {
     Section { name: String, content: Vec<AstNode> },
+    Label { name: String, content: Vec<AstNode> },
     Addi { rd: u32, rs1: u32, imm: u64 },
     Ecall,
 }
@@ -12,6 +13,7 @@ pub enum AstNode {
 pub struct ParserCtx {
     pub nodes: Vec<AstNode>,
     pub current_section: Option<(String, Vec<AstNode>)>,
+    pub current_label: Option<(String, Vec<AstNode>)>,
 }
 
 impl ParserCtx {
@@ -19,26 +21,46 @@ impl ParserCtx {
         Self {
             nodes: Vec::new(),
             current_section: None,
+            current_label: None,
         }
     }
     pub fn push(&mut self, node: AstNode) {
-        if self.current_section.is_some() {
+        if self.current_label.is_some() {
+            self.current_label.as_mut().unwrap().1.push(node);
+            return;
+        } else if self.current_section.is_some() {
+            println!("asd");
             self.current_section.as_mut().unwrap().1.push(node);
+
             return;
         }
 
         self.nodes.push(node);
     }
-    pub fn get(&mut self) -> &Vec<AstNode> {
-         if self.current_section.is_some() {
-        let current = self.current_section.as_ref().unwrap();
-        self.nodes.push(AstNode::Section {
-            name: current.0.clone(),
-            content: current.1.clone(),
-        });
-    }
+    pub fn push_label(&mut self) {
+        if self.current_label.is_some() {
+            let curr = self.current_label.clone().unwrap();
 
-         self.nodes.as_ref()
+            self.current_label = None;
+
+            self.push(AstNode::Label {
+                name: curr.0.clone(),
+                content: curr.1.clone(),
+            })
+        }
+    }
+    pub fn get(&mut self) -> &Vec<AstNode> {
+        self.push_label();
+
+        if self.current_section.is_some() {
+            let current = self.current_section.as_ref().unwrap();
+            self.nodes.push(AstNode::Section {
+                name: current.0.clone(),
+                content: current.1.clone(),
+            });
+        }
+
+        self.nodes.as_ref()
     }
 }
 
@@ -62,8 +84,14 @@ pub fn nodes_from_tokens(lex: &mut Lexer<'_, Token>) -> Vec<AstNode> {
                 Token::Ecall => {
                     ctx.push(AstNode::Ecall);
                 }
+                Token::Label(s) => {
+                    ctx.push_label();
+
+                    ctx.current_label = Some((s, Vec::new()));
+                }
                 Token::Section => {
                     if ctx.current_section.is_some() {
+                        ctx.push_label();
                         let current = ctx.current_section.unwrap();
                         ctx.nodes.push(AstNode::Section {
                             name: current.0,
@@ -83,7 +111,7 @@ pub fn nodes_from_tokens(lex: &mut Lexer<'_, Token>) -> Vec<AstNode> {
         }
     }
 
-    ctx.get().clone() 
+    ctx.get().clone()
 }
 
 pub fn next_reg(lex: &mut Lexer<'_, Token>) -> u32 {
