@@ -31,8 +31,7 @@ pub enum Token {
     #[token("section")]
     Section,
 
-    // i think this is broken
-    #[regex(";(.*)")]
+    #[regex("#(.*)")]
     Comment,
 
     #[regex(r"[A-Za-z_][A-Za-z0-9_]*:", |lex| {

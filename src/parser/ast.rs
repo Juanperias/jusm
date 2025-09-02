@@ -29,7 +29,6 @@ impl ParserCtx {
             self.current_label.as_mut().unwrap().1.push(node);
             return;
         } else if self.current_section.is_some() {
-            println!("asd");
             self.current_section.as_mut().unwrap().1.push(node);
 
             return;

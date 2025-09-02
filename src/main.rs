@@ -4,13 +4,7 @@ use std::path::Path;
 
 use logos::Logos;
 
-use crate::{
-    elf::obj::Elf,
-    parser::{
-        ast::{AstNode, nodes_from_tokens},
-        token::Token,
-    },
-};
+use crate::parser::{ast::nodes_from_tokens, token::Token};
 
 mod elf;
 mod parser;
@@ -22,9 +16,7 @@ fn main() {
 
     let nodes = nodes_from_tokens(&mut t);
     println!("{:#?}", nodes);
-    let mut elf = Elf::new();
-    let opcodes = riscv::encode_sections(nodes, &mut elf);
+    let elf = riscv::encode_sections(nodes);
 
     elf.write(&Path::new("output.o"));
-    println!("{:?}", opcodes);
 }

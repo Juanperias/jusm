@@ -1,7 +1,9 @@
 // note: apply & 0x0FFF to imm in addi
 
 pub mod encode;
-use object::SectionKind;
+use std::path::Path;
+
+use object::{SectionKind, SymbolKind};
 
 use crate::{elf::obj::Elf, parser::ast::AstNode};
 
@@ -25,7 +27,9 @@ pub fn encode(node: AstNode) -> Vec<u8> {
     }
 }
 
-pub fn encode_sections(sections: Vec<AstNode>, elf: &mut Elf) {
+pub fn encode_sections<'a>(sections: Vec<AstNode>) -> Elf<'a> {
+    let mut elf = Elf::new();
+
     for section in sections {
         match section {
             AstNode::Section { name, content } => {
@@ -36,16 +40,47 @@ pub fn encode_sections(sections: Vec<AstNode>, elf: &mut Elf) {
                     other => (other, SectionKind::Unknown),
                 };
 
-                let section = elf.create_section(opts.0.to_string(), opts.1);
                 let mut opcodes = Vec::new();
 
-                for node in content {
-                    opcodes.extend(encode(node));
-                }
+                let id = {
+                    let a = &mut elf;
+                    let (id, section_name) = {
+                        let s = a.create_section(opts.0.to_string(), opts.1);
 
-                elf.write_section(section.id, &opcodes, 4);
+                        (s.id, s.name.clone())
+                    };
+
+                    for node in content {
+                        match node {
+                            AstNode::Label { name, content } => {
+                                let mut symbol_content = Vec::new();
+
+                                for node in content {
+                                    symbol_content.extend(encode(node));
+                                }
+
+                                a.create_symbol(
+                                    section_name.clone(),
+                                    name,
+                                    SymbolKind::Text,
+                                    &symbol_content,
+                                    4,
+                                );
+                            }
+                            n => {
+                                opcodes.extend(encode(n));
+                            }
+                        }
+                    }
+
+                    id
+                };
+
+                elf.write_section(id, &opcodes, 4);
             }
             _ => {}
         }
     }
+
+    elf
 }
