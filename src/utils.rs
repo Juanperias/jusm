@@ -12,6 +12,8 @@ pub fn token_to_reg(token: &Token) -> u32 {
     match token {
         Token::Zero => 0,
         Token::A0 => 10,
+        Token::A1 => 11,
+        Token::A2 => 12,
         Token::A7 => 17,
         _ => panic!("Expected reg"),
     }

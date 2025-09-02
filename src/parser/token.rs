@@ -24,6 +24,12 @@ pub enum Token {
     #[token("a0")]
     A0,
 
+    #[token("a1")]
+    A1,
+
+    #[token("a2")]
+    A2,
+
     #[regex(r"\d+",  |lex| {
           lex.slice().trim().parse::<u64>().expect("Invalid number")
     })]
