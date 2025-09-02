@@ -7,6 +7,7 @@ pub enum AstNode {
     Section { name: String, content: Vec<AstNode> },
     Label { name: String, content: Vec<AstNode> },
     Addi { rd: u32, rs1: u32, imm: u64 },
+    Add { rd: u32, rs1: u32, rs2: u32 },
     Ecall,
 }
 
@@ -85,6 +86,16 @@ pub fn nodes_from_tokens(lex: &mut Lexer<'_, Token>) -> Vec<AstNode> {
                 }
                 Token::Nop => {
                     ctx.push(AstNode::Addi { rd: 0, rs1: 0, imm: 0 });
+                }
+                Token::Add => {
+                    let rd = next_reg(lex);
+
+                    let rs1 = next_reg(lex);
+
+                    let rs2 = next_reg(lex);
+
+                    ctx.push(AstNode::Add { rd, rs1, rs2 })
+
                 }
                 Token::Label(s) => {
                     ctx.push_label();

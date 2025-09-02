@@ -5,7 +5,7 @@ use std::path::Path;
 
 use object::{SectionKind, SymbolKind};
 
-use crate::{elf::obj::Elf, parser::ast::AstNode};
+use crate::{elf::obj::Elf, parser::ast::AstNode, riscv::encode::{register, RegArgs}};
 
 use self::encode::{ImmArgs, immediate};
 
@@ -22,6 +22,14 @@ pub fn encode(node: AstNode) -> Vec<u8> {
             rs1,
             rd,
             opcode: 0b0010011,
+        }),
+        AstNode::Add { rd, rs1, rs2 } => register(RegArgs {
+            rs1,
+            rs2,
+            rd,
+            funct3: 0,
+            funct7: 0,
+            opcode: 0b0110011,
         }),
         _ => Vec::new(),
     }

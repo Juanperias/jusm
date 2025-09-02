@@ -11,6 +11,9 @@ pub enum Token {
 
     #[token("nop")]
     Nop,
+
+    #[token("add")]
+    Add,
         
     #[token("zero")]
     Zero,
