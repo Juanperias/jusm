@@ -5,6 +5,15 @@ pub struct ImmArgs {
     pub opcode: u32,
 }
 
+pub struct RegArgs {
+    pub rs1: u32,
+    pub rs2: u32,
+    pub rd: u32,
+    pub funct7: u32,
+    pub funct3: u32,
+    pub opcode: u32,
+}
+
 pub fn immediate(arg: ImmArgs) -> Vec<u8> {
     let ins = ((arg.imm as u32) << 20)
         | (arg.rs1 as u32) << 15
@@ -15,4 +24,13 @@ pub fn immediate(arg: ImmArgs) -> Vec<u8> {
     ins.to_le_bytes().to_vec()
 }
 
-pub fn register() {}
+pub fn register(arg: RegArgs) -> Vec<u8> {
+    let ins = arg.funct7 << 25
+        | arg.rs2 << 20
+        | arg.rs1 << 15
+        | arg.funct3 << 12
+        | arg.rd << 7
+        | arg.opcode;
+
+    ins.to_le_bytes().to_vec()
+}
