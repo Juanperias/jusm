@@ -9,6 +9,4 @@ _start:
 	ecall
 
 other:
-	addi, zero, zero, 0
-
- 
+	nop 

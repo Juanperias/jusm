@@ -83,6 +83,9 @@ pub fn nodes_from_tokens(lex: &mut Lexer<'_, Token>) -> Vec<AstNode> {
                 Token::Ecall => {
                     ctx.push(AstNode::Ecall);
                 }
+                Token::Nop => {
+                    ctx.push(AstNode::Addi { rd: 0, rs1: 0, imm: 0 });
+                }
                 Token::Label(s) => {
                     ctx.push_label();
 

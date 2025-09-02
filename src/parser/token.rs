@@ -9,6 +9,9 @@ pub enum Token {
     #[token("addi")]
     Addi,
 
+    #[token("nop")]
+    Nop,
+        
     #[token("zero")]
     Zero,
 
