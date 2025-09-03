@@ -93,31 +93,3 @@ pub struct Section {
     pub symbol_table: HashMap<String, SymbolId>,
 }
 
-impl Section {
-    pub fn create_symbol(
-        &mut self,
-        name: String,
-        kind: SymbolKind,
-        content: &[u8],
-        align: u64,
-        elf: &mut Elf,
-    ) {
-        elf.elf.add_symbol(Symbol {
-            name: name.as_bytes().to_vec(),
-            value: self.tvalue,
-            size: content.len() as u64,
-            kind,
-            scope: SymbolScope::Linkage,
-            weak: false,
-            section: SymbolSection::Section(self.id),
-            flags: SymbolFlags::Elf {
-                st_info: 0x12,
-                st_other: 0x0,
-            },
-        });
-
-        self.tvalue += content.len() as u64;
-
-        elf.write_section(self.id, content, align);
-    }
-}

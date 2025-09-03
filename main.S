@@ -9,6 +9,7 @@ _start:
 	addi a1, zero, 3
 
 	add a7, a2, a1
+
 	# ecall = system call
 	ecall
 

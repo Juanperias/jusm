@@ -11,60 +11,6 @@ pub enum AstNode {
     Ecall,
 }
 
-pub struct ParserCtx {
-    pub nodes: Vec<AstNode>,
-    pub current_section: Option<(String, Vec<AstNode>)>,
-    pub current_label: Option<(String, Vec<AstNode>)>,
-}
-
-impl ParserCtx {
-    pub fn new() -> Self {
-        Self {
-            nodes: Vec::new(),
-            current_section: None,
-            current_label: None,
-        }
-    }
-    pub fn push(&mut self, node: AstNode) {
-        if self.current_label.is_some() {
-            self.current_label.as_mut().unwrap().1.push(node);
-            return;
-        } else if self.current_section.is_some() {
-            self.current_section.as_mut().unwrap().1.push(node);
-
-            return;
-        }
-
-        self.nodes.push(node);
-    }
-    pub fn push_label(&mut self) {
-        if self.current_label.is_some() {
-            let curr = self.current_label.clone().unwrap();
-
-            self.current_label = None;
-
-            self.push(AstNode::Label {
-                name: curr.0.clone(),
-                content: curr.1.clone(),
-            })
-        }
-    }
-    pub fn get(&mut self) -> &Vec<AstNode> {
-        self.push_label();
-
-        if self.current_section.is_some() {
-            let current = self.current_section.as_ref().unwrap();
-            self.nodes.push(AstNode::Section {
-                name: current.0.clone(),
-                content: current.1.clone(),
-            });
-        }
-
-        self.nodes.as_ref()
-    }
-}
-
-//TODO: improve this
 pub fn nodes_from_tokens(lex: &mut Lexer<'_, Token>) -> Vec<AstNode> {
     let mut ctx = ParserCtx::new();
 
@@ -143,4 +89,57 @@ pub fn next_num(lex: &mut Lexer<'_, Token>) -> u64 {
     let val = lex.next().unwrap().unwrap();
 
     check_num(&val)
+}
+
+pub struct ParserCtx {
+    pub nodes: Vec<AstNode>,
+    pub current_section: Option<(String, Vec<AstNode>)>,
+    pub current_label: Option<(String, Vec<AstNode>)>,
+}
+
+impl ParserCtx {
+    pub fn new() -> Self {
+        Self {
+            nodes: Vec::new(),
+            current_section: None,
+            current_label: None,
+        }
+    }
+    pub fn push(&mut self, node: AstNode) {
+        if self.current_label.is_some() {
+            self.current_label.as_mut().unwrap().1.push(node);
+            return;
+        } else if self.current_section.is_some() {
+            self.current_section.as_mut().unwrap().1.push(node);
+
+            return;
+        }
+
+        self.nodes.push(node);
+    }
+    pub fn push_label(&mut self) {
+        if self.current_label.is_some() {
+            let curr = self.current_label.clone().unwrap();
+
+            self.current_label = None;
+
+            self.push(AstNode::Label {
+                name: curr.0.clone(),
+                content: curr.1.clone(),
+            })
+        }
+    }
+    pub fn get(&mut self) -> &Vec<AstNode> {
+        self.push_label();
+
+        if self.current_section.is_some() {
+            let current = self.current_section.as_ref().unwrap();
+            self.nodes.push(AstNode::Section {
+                name: current.0.clone(),
+                content: current.1.clone(),
+            });
+        }
+
+        self.nodes.as_ref()
+    }
 }

@@ -14,6 +14,33 @@ pub enum Token {
 
     #[token("add")]
     Add,
+
+    #[token("sub")]
+    Sub,
+
+    #[token("xor")]
+    Xor,
+
+    #[token("or")]
+    Or,
+
+    #[token("and")]
+    And,
+
+    #[token("sll")]
+    Sll,
+
+    #[token("srl")]
+    Srl,
+
+    #[token("sra")]
+    Sra,
+
+    #[token("slt")]
+    Slt,
+
+    #[token("sltu")]
+    Sltu,
         
     #[token("zero")]
     Zero,

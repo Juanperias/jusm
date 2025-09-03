@@ -35,60 +35,50 @@ pub fn encode(node: AstNode) -> Vec<u8> {
     }
 }
 
+fn section_opts(name: &str) -> (&str, SectionKind) {
+    match name {
+        ".text" => ("text", SectionKind::Text),
+        ".data" => ("data", SectionKind::Data),
+        ".bss"  => ("bss", SectionKind::UninitializedData),
+        other   => (other, SectionKind::Unknown),
+    }
+}
+
+fn encode_label(a: &mut Elf, section_name: &str, name: String, content: Vec<AstNode>) {
+    let mut symbol_content = Vec::new();
+    for node in content {
+        symbol_content.extend(encode(node));
+    }
+    a.create_symbol(section_name.to_string(), name, SymbolKind::Text, &symbol_content, 4);
+}
+
 pub fn encode_sections<'a>(sections: Vec<AstNode>) -> Elf<'a> {
     let mut elf = Elf::new();
 
     for section in sections {
-        match section {
-            AstNode::Section { name, content } => {
-                let opts = match name.as_str() {
-                    ".text" => ("text", SectionKind::Text),
-                    ".data" => ("data", SectionKind::Data),
-                    ".bss" => ("bss", SectionKind::UninitializedData),
-                    other => (other, SectionKind::Unknown),
-                };
+        if let AstNode::Section { name, content } = section {
+            let (sec_name, sec_kind) = section_opts(&name);
+            
+            let id = { 
+                let s = elf.create_section(sec_name.to_string(), sec_kind);
 
-                let mut opcodes = Vec::new();
+                s.id
+            };
+            let mut opcodes = Vec::new();
 
-                let id = {
-                    let a = &mut elf;
-                    let (id, section_name) = {
-                        let s = a.create_section(opts.0.to_string(), opts.1);
-
-                        (s.id, s.name.clone())
-                    };
-
-                    for node in content {
-                        match node {
-                            AstNode::Label { name, content } => {
-                                let mut symbol_content = Vec::new();
-
-                                for node in content {
-                                    symbol_content.extend(encode(node));
-                                }
-
-                                a.create_symbol(
-                                    section_name.clone(),
-                                    name,
-                                    SymbolKind::Text,
-                                    &symbol_content,
-                                    4,
-                                );
-                            }
-                            n => {
-                                opcodes.extend(encode(n));
-                            }
-                        }
+            for node in content {
+                match node {
+                    AstNode::Label { name, content } => {
+                        encode_label(&mut elf, &sec_name, name, content);
                     }
-
-                    id
-                };
-
-                elf.write_section(id, &opcodes, 4);
+                    n => opcodes.extend(encode(n)),
+                }
             }
-            _ => {}
+
+            elf.write_section(id, &opcodes, 4);
         }
     }
 
     elf
 }
+
