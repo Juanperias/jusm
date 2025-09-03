@@ -1,4 +1,4 @@
-section .text
+.section .text
 
 _start:
 	# a0 = 0 exit code

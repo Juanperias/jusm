@@ -67,7 +67,7 @@ pub enum Token {
     })]
     NegNumber(i64),
 
-    #[token("section")]
+    #[token(".section")]
     Section,
 
     #[regex("#(.*)")]
