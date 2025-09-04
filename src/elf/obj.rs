@@ -92,4 +92,3 @@ pub struct Section {
     pub tvalue: u64,
     pub symbol_table: HashMap<String, SymbolId>,
 }
-

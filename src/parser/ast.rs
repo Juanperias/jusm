@@ -8,6 +8,7 @@ pub enum AstNode {
     Label { name: String, content: Vec<AstNode> },
     Addi { rd: u32, rs1: u32, imm: u64 },
     Add { rd: u32, rs1: u32, rs2: u32 },
+    Sub { rd: u32, rs1: u32, rs2: u32 },
     Ecall,
 }
 
@@ -31,17 +32,21 @@ pub fn nodes_from_tokens(lex: &mut Lexer<'_, Token>) -> Vec<AstNode> {
                     ctx.push(AstNode::Ecall);
                 }
                 Token::Nop => {
-                    ctx.push(AstNode::Addi { rd: 0, rs1: 0, imm: 0 });
+                    ctx.push(AstNode::Addi {
+                        rd: 0,
+                        rs1: 0,
+                        imm: 0,
+                    });
+                }
+                Token::Sub => {
+                    let (rd, rs1, rs2) = register_args(lex);
+
+                    ctx.push(AstNode::Sub { rd, rs1, rs2 })
                 }
                 Token::Add => {
-                    let rd = next_reg(lex);
-
-                    let rs1 = next_reg(lex);
-
-                    let rs2 = next_reg(lex);
+                    let (rd, rs1, rs2) = register_args(lex);
 
                     ctx.push(AstNode::Add { rd, rs1, rs2 })
-
                 }
                 Token::Label(s) => {
                     ctx.push_label();
@@ -59,7 +64,7 @@ pub fn nodes_from_tokens(lex: &mut Lexer<'_, Token>) -> Vec<AstNode> {
                     }
 
                     let name = next_name(lex);
-
+                    println!("{name}");
                     ctx.current_section = Some((name, Vec::new()));
                 }
                 _ => {}
@@ -71,6 +76,14 @@ pub fn nodes_from_tokens(lex: &mut Lexer<'_, Token>) -> Vec<AstNode> {
     }
 
     ctx.get().clone()
+}
+
+pub fn register_args(lex: &mut Lexer<'_, Token>) -> (u32, u32, u32) {
+    let rd = next_reg(lex);
+    let rs1 = next_reg(lex);
+    let rs2 = next_reg(lex);
+
+    (rd, rs1, rs2)
 }
 
 pub fn next_reg(lex: &mut Lexer<'_, Token>) -> u32 {

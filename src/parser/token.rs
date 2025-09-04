@@ -41,7 +41,7 @@ pub enum Token {
 
     #[token("sltu")]
     Sltu,
-        
+
     #[token("zero")]
     Zero,
 
@@ -56,6 +56,9 @@ pub enum Token {
 
     #[token("a2")]
     A2,
+
+    #[token("a3")]
+    A3,
 
     #[regex(r"\d+",  |lex| {
           lex.slice().trim().parse::<u64>().expect("Invalid number")
@@ -78,6 +81,6 @@ pub enum Token {
     })]
     Label(String),
 
-    #[regex(r"\..*", |lex| lex.slice().to_string())]
+    #[regex(r"\.[A-Za-z_][A-Za-z0-9_]*", |lex| lex.slice().to_string())]
     Name(String),
 }

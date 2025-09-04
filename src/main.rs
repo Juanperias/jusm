@@ -1,11 +1,14 @@
 // fix this code
 
-use std::{fs::{read_to_string, File}, path::Path};
+use std::{
+    fs::{File, read_to_string},
+    path::Path,
+};
 
 use logos::Logos;
 
-use clap::Parser;
 use crate::parser::{ast::nodes_from_tokens, token::Token};
+use clap::Parser;
 
 mod elf;
 mod parser;
@@ -22,7 +25,7 @@ pub struct Cli {
 
 fn main() {
     let cli = Cli::parse();
-    
+
     let code = read_to_string(cli.file).unwrap();
 
     let mut t = Token::lexer(&code);
@@ -31,5 +34,6 @@ fn main() {
     println!("{:#?}", nodes);
     let elf = riscv::encode_sections(nodes);
 
+    println!("{}", cli.output);
     elf.write(&Path::new(&cli.output));
 }
