@@ -35,6 +35,14 @@ pub fn encode(node: AstNode) -> Vec<u8> {
             funct3: 0x0,
             opcode: 0b0110011,
         }),
+        AstNode::Xor { rd, rs1, rs2 } => register(RegArgs { 
+            rd,
+            rs1,
+            rs2,
+            funct7: 0x0,
+            funct3: 0x4,
+            opcode: 0b0110011,
+        }),
         AstNode::Add { rd, rs1, rs2 } => register(RegArgs {
             rs1,
             rs2,

@@ -9,6 +9,9 @@ pub enum AstNode {
     Addi { rd: u32, rs1: u32, imm: u64 },
     Add { rd: u32, rs1: u32, rs2: u32 },
     Sub { rd: u32, rs1: u32, rs2: u32 },
+    Xor { rd: u32, rs1: u32, rs2: u32 },
+
+
     Ecall,
 }
 
@@ -47,6 +50,11 @@ pub fn nodes_from_tokens(lex: &mut Lexer<'_, Token>) -> Vec<AstNode> {
                     let (rd, rs1, rs2) = register_args(lex);
 
                     ctx.push(AstNode::Add { rd, rs1, rs2 })
+                }
+                Token::Xor => {
+                    let (rd, rs1, rs2) = register_args(lex);
+
+                    ctx.push(AstNode::Xor { rd, rs1, rs2 });
                 }
                 Token::Label(s) => {
                     ctx.push_label();
