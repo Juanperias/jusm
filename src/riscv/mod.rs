@@ -19,12 +19,14 @@ pub fn encode(node: AstNode) -> Vec<u8> {
             imm: 0x0,
             rs1: 0x0,
             rd: 0x0,
+            funct3: 0x0,  
             opcode: 0b1110011,
         }),
         AstNode::Addi { rd, rs1, imm } => immediate(ImmArgs {
             imm: imm & 0x0fff,
             rs1,
             rd,
+            funct3: 0x0,
             opcode: 0b0010011,
         }),
         AstNode::Sub { rd, rs1, rs2 } => register(RegArgs {
