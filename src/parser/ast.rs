@@ -20,6 +20,13 @@ pub enum AstNode {
     Ecall,
 }
 
+macro_rules! register_fn {
+    ($name:ident, $ctx:expr, $lex:expr) => {{
+        let (rd, rs1, rs2) = register_args($lex);
+        $ctx.push(AstNode::$name { rd, rs1, rs2 });
+    }}
+}
+
 pub fn nodes_from_tokens(lex: &mut Lexer<'_, Token>) -> Vec<AstNode> {
     let mut ctx = ParserCtx::new();
 
@@ -46,35 +53,12 @@ pub fn nodes_from_tokens(lex: &mut Lexer<'_, Token>) -> Vec<AstNode> {
                         imm: 0,
                     });
                 }
-                Token::Sub => {
-                    let (rd, rs1, rs2) = register_args(lex);
-
-                    ctx.push(AstNode::Sub { rd, rs1, rs2 })
-                }
-                Token::Add => {
-                    let (rd, rs1, rs2) = register_args(lex);
-
-                    ctx.push(AstNode::Add { rd, rs1, rs2 })
-                }
-                Token::Xor => {
-                    let (rd, rs1, rs2) = register_args(lex);
-
-                    ctx.push(AstNode::Xor { rd, rs1, rs2 });
-                }
-                Token::Sll => {
-                    let (rd, rs1, rs2) = register_args(lex);
-
-                    ctx.push(AstNode::Sll {
-                        rs1,
-                        rs2,
-                        rd
-                    })
-                }
-                Token::Sra => {
-                    let (rd, rs1, rs2) = register_args(lex);
-
-                    ctx.push(AstNode::Sra { rd: rd, rs1: rs1, rs2: rs2 })
-                }
+                Token::Sub => register_fn!(Sub, ctx, lex),
+                Token::Add => register_fn!(Add, ctx, lex),
+                Token::Xor => register_fn!(Xor, ctx, lex),
+                Token::Sll => register_fn!(Sll, ctx, lex),
+                Token::Srl => register_fn!(Srl, ctx, lex),
+                Token::Sra => register_fn!(Sra, ctx, lex),
                 Token::Label(s) => {
                     ctx.push_label();
 
