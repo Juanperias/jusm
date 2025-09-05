@@ -6,6 +6,7 @@ _start:
 	addi a0, zero, 20
 	xor a0, a0, a0
 	addi a7, zero, 93
+
 	# ecall = system call
 	ecall
 
