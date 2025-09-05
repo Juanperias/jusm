@@ -12,6 +12,8 @@ pub enum AstNode {
     Xor { rd: u32, rs1: u32, rs2: u32 },
     Sll { rd: u32, rs1: u32, rs2: u32 },
     Srl { rd: u32, rs1: u32, rs2: u32 },
+    Sra { rd: u32, rs1: u32, rs2: u32 },
+
 
 
 
@@ -68,14 +70,10 @@ pub fn nodes_from_tokens(lex: &mut Lexer<'_, Token>) -> Vec<AstNode> {
                         rd
                     })
                 }
-                Token::Srl => {
+                Token::Sra => {
                     let (rd, rs1, rs2) = register_args(lex);
 
-                    ctx.push(AstNode::Srl {
-                        rd,
-                        rs1,
-                        rs2,
-                    });
+                    ctx.push(AstNode::Sra { rd: rd, rs1: rs1, rs2: rs2 })
                 }
                 Token::Label(s) => {
                     ctx.push_label();
@@ -106,6 +104,8 @@ pub fn nodes_from_tokens(lex: &mut Lexer<'_, Token>) -> Vec<AstNode> {
 
     ctx.get().clone()
 }
+
+
 
 pub fn register_args(lex: &mut Lexer<'_, Token>) -> (u32, u32, u32) {
     let rd = next_reg(lex);
