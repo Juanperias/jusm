@@ -13,6 +13,9 @@ pub enum AstNode {
     Sll { rd: u32, rs1: u32, rs2: u32 },
     Srl { rd: u32, rs1: u32, rs2: u32 },
     Sra { rd: u32, rs1: u32, rs2: u32 },
+    Slt { rd: u32, rs1: u32, rs2: u32 },
+    Sltu { rd: u32, rs1: u32, rs2: u32 },
+
 
 
 
@@ -59,6 +62,8 @@ pub fn nodes_from_tokens(lex: &mut Lexer<'_, Token>) -> Vec<AstNode> {
                 Token::Sll => register_fn!(Sll, ctx, lex),
                 Token::Srl => register_fn!(Srl, ctx, lex),
                 Token::Sra => register_fn!(Sra, ctx, lex),
+                Token::Slt => register_fn!(Slt, ctx, lex),
+                Token::Sltu => register_fn!(Sltu, ctx, lex),
                 Token::Label(s) => {
                     ctx.push_label();
 
