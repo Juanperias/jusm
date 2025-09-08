@@ -4,6 +4,13 @@ pub fn check_num(reg: &Token) -> u64 {
     match reg {
         Token::Number(n) => *n,
         Token::NegNumber(n) => *n as u64,
+        Token::Char(c) => {
+            if !c.is_ascii() {
+                panic!("Cannot use this char");
+            }
+
+            (*c as u8) as u64
+        },
         _ => panic!("Expected number"),
     }
 }

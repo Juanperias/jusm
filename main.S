@@ -2,9 +2,9 @@
 
 _start:
 	addi sp, sp, -32
-	addi t3, zero, 72
+	addi t3, zero, 'H'
 	sb t3, 0(sp)
-
+	
 	addi a0, zero, 1
 	addi a1, sp, 0
 	addi a2, zero, 1
