@@ -15,7 +15,7 @@ pub enum AstNode {
     Sra { rd: u32, rs1: u32, rs2: u32 },
     Slt { rd: u32, rs1: u32, rs2: u32 },
     Sltu { rd: u32, rs1: u32, rs2: u32 },
-
+    Sb { rs1: u32, rs2: u32, imm: u64 },
 
 
 
@@ -64,6 +64,18 @@ pub fn nodes_from_tokens(lex: &mut Lexer<'_, Token>) -> Vec<AstNode> {
                 Token::Sra => register_fn!(Sra, ctx, lex),
                 Token::Slt => register_fn!(Slt, ctx, lex),
                 Token::Sltu => register_fn!(Sltu, ctx, lex),
+                Token::Sb => {
+                    let rs2 = next_reg(lex);
+                    let imm = next_num(lex);
+
+                    let rs1 = next_in_paren(lex, next_reg);
+                    
+                    ctx.push(AstNode::Sb {
+                        rs2,
+                        rs1,
+                        imm
+                    });
+                },
                 Token::Label(s) => {
                     ctx.push_label();
 
@@ -102,6 +114,25 @@ pub fn register_args(lex: &mut Lexer<'_, Token>) -> (u32, u32, u32) {
     let rs2 = next_reg(lex);
 
     (rd, rs1, rs2)
+}
+
+pub fn next_in_paren<T, F>(lex: &mut Lexer<'_, Token>, func: F) -> T 
+where
+    F: Fn(&mut Lexer<'_, Token>) -> T,
+{
+    expect_token(lex, Token::ParenthesisStart);
+    let ret = func(lex);
+    expect_token(lex, Token::ParenthesisEnd);
+
+    ret
+}
+
+pub fn expect_token(lex: &mut Lexer<'_, Token>, expected: Token) {
+    let l = lex.next().unwrap().unwrap();
+
+    if l != expected {
+        panic!("Expected token... please fix this error messages")
+    }
 }
 
 pub fn next_reg(lex: &mut Lexer<'_, Token>) -> u32 {

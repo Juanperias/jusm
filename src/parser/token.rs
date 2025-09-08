@@ -48,6 +48,18 @@ pub enum Token {
     #[token("a7")]
     A7,
 
+    #[token("sp")]
+    Sp,
+
+    #[token("t3")]
+    T3,
+
+    #[token("(")]
+    ParenthesisStart,
+
+    #[token(")")]
+    ParenthesisEnd,
+
     #[token("a0")]
     A0,
 
@@ -59,6 +71,9 @@ pub enum Token {
 
     #[token("a3")]
     A3,
+
+    #[token("sb")]
+    Sb,
 
     #[regex(r"\d+",  |lex| {
           lex.slice().trim().parse::<u64>().expect("Invalid number")

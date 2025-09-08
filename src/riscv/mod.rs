@@ -8,7 +8,7 @@ use object::{SectionKind, SymbolKind};
 use crate::{
     elf::obj::Elf,
     parser::ast::AstNode,
-    riscv::encode::{RegArgs, register},
+    riscv::encode::{RegArgs, register, store, StoreArgs},
 };
 
 use self::encode::{ImmArgs, immediate};
@@ -92,6 +92,13 @@ pub fn encode(node: AstNode) -> Vec<u8> {
             funct3: 0,
             funct7: 0,
             opcode: 0b0110011,
+        }),
+        AstNode::Sb { rs1, rs2, imm } => store(StoreArgs {
+            rs1,
+            rs2,
+            funct3: 0,
+            imm,
+            opcode: 0b0100011,
         }),
         _ => Vec::new(),
     }
