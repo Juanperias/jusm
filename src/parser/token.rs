@@ -85,11 +85,14 @@ pub enum Token {
     })]
     NegNumber(i64),
 
-    #[regex("'[A-Za-z]'", |lex| {
-        let a = lex.slice().trim().replace("'", "");
-        
-        a.parse::<char>().unwrap()
-    })]
+    #[regex(r"'(\\.|[A-Za-z])'", |lex| {
+    let a = lex.slice().trim_matches('\'');
+    let b = match a {
+        r"\n" => "\n",
+        s => s,
+    };
+    b.parse::<char>().unwrap()
+})]
     Char(char),
 
     #[token(".section")]

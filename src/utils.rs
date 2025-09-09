@@ -3,7 +3,10 @@ use std::sync::atomic::Ordering;
 use colored::Colorize;
 use logos::Lexer;
 
-use crate::parser::{ast::{LINE, SUCCESS}, token::Token};
+use crate::parser::{
+    ast::{LINE, SUCCESS},
+    token::Token,
+};
 
 pub fn check_num(reg: &Token, lex: &mut Lexer<'_, Token>) -> u64 {
     match reg {
@@ -16,13 +19,18 @@ pub fn check_num(reg: &Token, lex: &mut Lexer<'_, Token>) -> u64 {
 
             (*c as u8) as u64
         }
-        _ => { 
+        _ => {
             SUCCESS.store(false, Ordering::SeqCst);
 
-            println!("{}\n\tFound: {}\n\tLine: {}", "Syntax Error, Expected number:".bright_red(), lex.slice(), LINE.load(Ordering::Relaxed));
-            
+            println!(
+                "{}\n\tFound: {}\n\tLine: {}",
+                "Syntax Error, Expected number:".bright_red(),
+                lex.slice(),
+                LINE.load(Ordering::Relaxed)
+            );
+
             0
-        },
+        }
     }
 }
 
@@ -39,10 +47,15 @@ pub fn token_to_reg(token: &Token, lex: &mut Lexer<'_, Token>) -> u32 {
         _ => {
             SUCCESS.store(false, Ordering::SeqCst);
 
-            println!("{}\n\tFound: {}\n\tLine: {}", "Syntax Error, Expected Reg:".bright_red(), lex.slice(), LINE.load(Ordering::Relaxed));
+            println!(
+                "{}\n\tFound: {}\n\tLine: {}",
+                "Syntax Error, Expected Reg:".bright_red(),
+                lex.slice(),
+                LINE.load(Ordering::Relaxed)
+            );
 
             0
-        },
+        }
     }
 }
 
@@ -52,9 +65,14 @@ pub fn token_to_name(token: &Token, lex: &mut Lexer<'_, Token>) -> String {
         _ => {
             SUCCESS.store(false, Ordering::SeqCst);
 
-            println!("{}\n\tFound: {}\n\tLine: {}", "Syntax Error, Expected name:".bright_red(), lex.slice(), LINE.load(Ordering::Relaxed));
+            println!(
+                "{}\n\tFound: {}\n\tLine: {}",
+                "Syntax Error, Expected name:".bright_red(),
+                lex.slice(),
+                LINE.load(Ordering::Relaxed)
+            );
 
             String::new()
-        },
+        }
     }
 }
