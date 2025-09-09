@@ -1,6 +1,11 @@
-use crate::parser::token::Token;
+use std::sync::atomic::Ordering;
 
-pub fn check_num(reg: &Token) -> u64 {
+use colored::Colorize;
+use logos::Lexer;
+
+use crate::parser::{ast::{LINE, SUCCESS}, token::Token};
+
+pub fn check_num(reg: &Token, lex: &mut Lexer<'_, Token>) -> u64 {
     match reg {
         Token::Number(n) => *n,
         Token::NegNumber(n) => *n as u64,
@@ -11,11 +16,17 @@ pub fn check_num(reg: &Token) -> u64 {
 
             (*c as u8) as u64
         }
-        _ => panic!("Expected number"),
+        _ => { 
+            SUCCESS.store(false, Ordering::SeqCst);
+
+            println!("{}\n\tFound: {}\n\tLine: {}", "Syntax Error, Expected number:".bright_red(), lex.slice(), LINE.load(Ordering::Relaxed));
+            
+            0
+        },
     }
 }
 
-pub fn token_to_reg(token: &Token) -> u32 {
+pub fn token_to_reg(token: &Token, lex: &mut Lexer<'_, Token>) -> u32 {
     match token {
         Token::Zero => 0,
         Token::A0 => 10,
@@ -25,13 +36,25 @@ pub fn token_to_reg(token: &Token) -> u32 {
         Token::A3 => 13,
         Token::Sp => 2,
         Token::T3 => 28,
-        _ => panic!("Expected reg"),
+        _ => {
+            SUCCESS.store(false, Ordering::SeqCst);
+
+            println!("{}\n\tFound: {}\n\tLine: {}", "Syntax Error, Expected Reg:".bright_red(), lex.slice(), LINE.load(Ordering::Relaxed));
+
+            0
+        },
     }
 }
 
-pub fn token_to_name(token: &Token) -> String {
+pub fn token_to_name(token: &Token, lex: &mut Lexer<'_, Token>) -> String {
     match token {
         Token::Name(s) => s.to_string(),
-        _ => panic!("Expected name"),
+        _ => {
+            SUCCESS.store(false, Ordering::SeqCst);
+
+            println!("{}\n\tFound: {}\n\tLine: {}", "Syntax Error, Expected name:".bright_red(), lex.slice(), LINE.load(Ordering::Relaxed));
+
+            String::new()
+        },
     }
 }

@@ -1,4 +1,4 @@
-use std::sync::atomic::{AtomicU64, Ordering};
+use std::sync::atomic::{AtomicBool, AtomicU64, Ordering};
 
 use super::token::Token;
 use crate::utils::{check_num, token_to_name, token_to_reg};
@@ -6,7 +6,9 @@ use colored::Colorize;
 use logos::Lexer;
 use thiserror::Error;
 
-static LINE: AtomicU64 = AtomicU64::new(0);
+pub static LINE: AtomicU64 = AtomicU64::new(0);
+
+pub static SUCCESS: AtomicBool = AtomicBool::new(true);
 
 #[derive(Debug, Error)]
 pub enum AstError {}
@@ -38,7 +40,6 @@ macro_rules! register_fn {
 
 pub fn nodes_from_tokens(lex: &mut Lexer<'_, Token>, source: String) -> Vec<AstNode> {
     let mut ctx = ParserCtx::new();
-    let mut success = true;
 
     while let Some(token) = lex.next() {
         let span = lex.span();
@@ -104,10 +105,10 @@ pub fn nodes_from_tokens(lex: &mut Lexer<'_, Token>, source: String) -> Vec<AstN
                 _ => {}
             },
             Err(_) => {
-                success = false;
+                SUCCESS.store(false, Ordering::SeqCst);
                 println!(
-                    "{}:\n \t{:?}\r\n line: {}",
-                    "Error Invalid Token".red(),
+                    "{}:\n \tFound: {:?}\r\n\tLine: {}",
+                    "Error, Invalid Token".bright_red(),
                     lex.slice(),
                     LINE.load(Ordering::Relaxed)
                 );
@@ -115,7 +116,7 @@ pub fn nodes_from_tokens(lex: &mut Lexer<'_, Token>, source: String) -> Vec<AstN
         }
     }
 
-    if !success {
+    if !SUCCESS.load(Ordering::Relaxed) {
         panic!("Invalid syntax");
     }
 
@@ -147,7 +148,7 @@ pub fn expect_token(lex: &mut Lexer<'_, Token>, expected: Token) {
     if l != expected {
         println!(
             "{}\n\tExpected {:?}\n\tFound {:?}\n\tLine {}",
-            "Syntax Error: Unexpected token".red(),
+            "Syntax Error, Unexpected token:".bright_red(),
             expected,
             l,
             LINE.load(Ordering::Relaxed)
@@ -156,21 +157,21 @@ pub fn expect_token(lex: &mut Lexer<'_, Token>, expected: Token) {
 }
 
 pub fn next_reg(lex: &mut Lexer<'_, Token>) -> u32 {
-    let reg = lex.next().unwrap().unwrap();
+    let reg = lex.next().unwrap().unwrap_or_default();
 
-    token_to_reg(&reg)
+    token_to_reg(&reg, lex)
 }
 
 pub fn next_name(lex: &mut Lexer<'_, Token>) -> String {
-    let name = lex.next().unwrap().unwrap();
+    let name = lex.next().unwrap().unwrap_or_default();
 
-    token_to_name(&name)
+    token_to_name(&name, lex)
 }
 
 pub fn next_num(lex: &mut Lexer<'_, Token>) -> u64 {
-    let val = lex.next().unwrap().unwrap();
+    let val = lex.next().unwrap().unwrap_or_default();
 
-    check_num(&val)
+    check_num(&val, lex)
 }
 
 pub struct ParserCtx {
