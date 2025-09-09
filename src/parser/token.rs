@@ -105,4 +105,12 @@ pub enum Token {
 
     #[regex(r"\.[A-Za-z_][A-Za-z0-9_]*", |lex| lex.slice().to_string())]
     Name(String),
+
+    Empty,
+}
+
+impl Default for Token {
+    fn default() -> Self {
+        Self::Empty
+    }
 }

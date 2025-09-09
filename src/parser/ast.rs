@@ -1,6 +1,15 @@
+use std::sync::atomic::{AtomicU64, Ordering};
+
 use super::token::Token;
 use crate::utils::{check_num, token_to_name, token_to_reg};
+use colored::Colorize;
 use logos::Lexer;
+use thiserror::Error;
+
+static LINE: AtomicU64 = AtomicU64::new(0);
+
+#[derive(Debug, Error)]
+pub enum AstError {}
 
 #[derive(Debug, Clone)]
 pub enum AstNode {
@@ -17,9 +26,6 @@ pub enum AstNode {
     Sltu { rd: u32, rs1: u32, rs2: u32 },
     Sb { rs1: u32, rs2: u32, imm: u64 },
 
-
-
-
     Ecall,
 }
 
@@ -27,14 +33,18 @@ macro_rules! register_fn {
     ($name:ident, $ctx:expr, $lex:expr) => {{
         let (rd, rs1, rs2) = register_args($lex);
         $ctx.push(AstNode::$name { rd, rs1, rs2 });
-    }}
+    }};
 }
 
-pub fn nodes_from_tokens(lex: &mut Lexer<'_, Token>) -> Vec<AstNode> {
+pub fn nodes_from_tokens(lex: &mut Lexer<'_, Token>, source: String) -> Vec<AstNode> {
     let mut ctx = ParserCtx::new();
+    let mut success = true;
 
     while let Some(token) = lex.next() {
-        println!("{:?}", token);
+        let span = lex.span();
+        let line = source[..span.start].chars().filter(|&c| c == '\n').count() + 1;
+        LINE.store(line as u64, Ordering::SeqCst);
+
         match token {
             Ok(t) => match t {
                 Token::Addi => {
@@ -69,13 +79,9 @@ pub fn nodes_from_tokens(lex: &mut Lexer<'_, Token>) -> Vec<AstNode> {
                     let imm = next_num(lex);
 
                     let rs1 = next_in_paren(lex, next_reg);
-                    
-                    ctx.push(AstNode::Sb {
-                        rs2,
-                        rs1,
-                        imm
-                    });
-                },
+
+                    ctx.push(AstNode::Sb { rs2, rs1, imm });
+                }
                 Token::Label(s) => {
                     ctx.push_label();
 
@@ -98,15 +104,23 @@ pub fn nodes_from_tokens(lex: &mut Lexer<'_, Token>) -> Vec<AstNode> {
                 _ => {}
             },
             Err(_) => {
-                println!("{:?}", lex.slice());
+                success = false;
+                println!(
+                    "{}:\n \t{:?}\r\n line: {}",
+                    "Error Invalid Token".red(),
+                    lex.slice(),
+                    LINE.load(Ordering::Relaxed)
+                );
             }
         }
     }
 
+    if !success {
+        panic!("Invalid syntax");
+    }
+
     ctx.get().clone()
 }
-
-
 
 pub fn register_args(lex: &mut Lexer<'_, Token>) -> (u32, u32, u32) {
     let rd = next_reg(lex);
@@ -116,7 +130,7 @@ pub fn register_args(lex: &mut Lexer<'_, Token>) -> (u32, u32, u32) {
     (rd, rs1, rs2)
 }
 
-pub fn next_in_paren<T, F>(lex: &mut Lexer<'_, Token>, func: F) -> T 
+pub fn next_in_paren<T, F>(lex: &mut Lexer<'_, Token>, func: F) -> T
 where
     F: Fn(&mut Lexer<'_, Token>) -> T,
 {
@@ -128,10 +142,16 @@ where
 }
 
 pub fn expect_token(lex: &mut Lexer<'_, Token>, expected: Token) {
-    let l = lex.next().unwrap().unwrap();
+    let l = lex.next().unwrap().unwrap_or_default();
 
     if l != expected {
-        panic!("Expected token... please fix this error messages")
+        println!(
+            "{}\n\tExpected {:?}\n\tFound {:?}\n\tLine {}",
+            "Syntax Error: Unexpected token".red(),
+            expected,
+            l,
+            LINE.load(Ordering::Relaxed)
+        );
     }
 }
 

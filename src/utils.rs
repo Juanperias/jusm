@@ -10,7 +10,7 @@ pub fn check_num(reg: &Token) -> u64 {
             }
 
             (*c as u8) as u64
-        },
+        }
         _ => panic!("Expected number"),
     }
 }

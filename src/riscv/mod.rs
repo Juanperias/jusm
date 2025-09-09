@@ -8,7 +8,7 @@ use object::{SectionKind, SymbolKind};
 use crate::{
     elf::obj::Elf,
     parser::ast::AstNode,
-    riscv::encode::{RegArgs, register, store, StoreArgs},
+    riscv::encode::{RegArgs, StoreArgs, register, store},
 };
 
 use self::encode::{ImmArgs, immediate};
@@ -19,7 +19,7 @@ pub fn encode(node: AstNode) -> Vec<u8> {
             imm: 0x0,
             rs1: 0x0,
             rd: 0x0,
-            funct3: 0x0,  
+            funct3: 0x0,
             opcode: 0b1110011,
         }),
         AstNode::Addi { rd, rs1, imm } => immediate(ImmArgs {
@@ -45,7 +45,7 @@ pub fn encode(node: AstNode) -> Vec<u8> {
             funct3: 0x1,
             opcode: 0b0110011,
         }),
-        AstNode::Srl { rd, rs1, rs2 } => register(RegArgs { 
+        AstNode::Srl { rd, rs1, rs2 } => register(RegArgs {
             rs1,
             rs2,
             rd,
@@ -61,7 +61,7 @@ pub fn encode(node: AstNode) -> Vec<u8> {
             funct3: 0x5,
             opcode: 0b0110011,
         }),
-        AstNode::Slt { rd, rs1, rs2 } => register(RegArgs { 
+        AstNode::Slt { rd, rs1, rs2 } => register(RegArgs {
             rs1,
             rs2,
             rd,
@@ -77,7 +77,7 @@ pub fn encode(node: AstNode) -> Vec<u8> {
             funct3: 0x3,
             opcode: 0b0110011,
         }),
-        AstNode::Xor { rd, rs1, rs2 } => register(RegArgs { 
+        AstNode::Xor { rd, rs1, rs2 } => register(RegArgs {
             rd,
             rs1,
             rs2,
