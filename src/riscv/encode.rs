@@ -23,6 +23,22 @@ pub struct StoreArgs {
     pub funct3: u32,
 }
 
+pub struct UpperArgs {
+    pub imm: u64,
+    pub rd: u32,
+    pub opcode: u32
+}
+
+// 00000000_00000000_00000000_00000000_00000000_00000000_00000000_00000000
+
+pub fn upper(arg: UpperArgs) -> Vec<u8> {
+    let ins = ((arg.imm & 0x00000000FFFFF000) as u32) << 12
+        | arg.rd << 7
+        | arg.opcode;
+
+    ins.to_le_bytes().to_vec()
+}
+
 pub fn store(arg: StoreArgs) -> Vec<u8> {
     let ins = ((arg.imm & 0x0000000000000FE0) as u32) << 25
         | arg.rs2 << 20
