@@ -76,3 +76,22 @@ pub fn token_to_name(token: &Token, lex: &mut Lexer<'_, Token>) -> String {
         }
     }
 }
+
+pub fn token_to_string(token: &Token, lex: &mut Lexer<'_, Token>) -> String {
+    match token {
+        Token::Str(s) => s.to_string(),
+        _ => {
+            SUCCESS.store(false, Ordering::SeqCst);
+
+            println!(
+                "{}\n\tFound: {}\n\tLine: {}",
+                "Syntax Error, Expected string:".bright_red(),
+                lex.slice(),
+                LINE.load(Ordering::Relaxed)
+            );
+
+            String::new()
+ 
+        }
+    }
+}

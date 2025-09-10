@@ -1,7 +1,7 @@
 use std::sync::atomic::{AtomicBool, AtomicU64, Ordering};
 
 use super::token::Token;
-use crate::utils::{check_num, token_to_name, token_to_reg};
+use crate::utils::{check_num, token_to_name, token_to_reg, token_to_string};
 use colored::Colorize;
 use logos::Lexer;
 use thiserror::Error;
@@ -27,7 +27,7 @@ pub enum AstNode {
     Slt { rd: u32, rs1: u32, rs2: u32 },
     Sltu { rd: u32, rs1: u32, rs2: u32 },
     Sb { rs1: u32, rs2: u32, imm: u64 },
-
+    Assci { seq: Vec<u8> },
     Ecall,
 }
 
@@ -45,6 +45,7 @@ pub fn nodes_from_tokens(lex: &mut Lexer<'_, Token>, source: String) -> Vec<AstN
         let span = lex.span();
         let line = source[..span.start].chars().filter(|&c| c == '\n').count() + 1;
         LINE.store(line as u64, Ordering::SeqCst);
+            println!("{:?}", token);
 
         match token {
             Ok(t) => match t {
@@ -102,6 +103,11 @@ pub fn nodes_from_tokens(lex: &mut Lexer<'_, Token>, source: String) -> Vec<AstN
                     println!("{name}");
                     ctx.current_section = Some((name, Vec::new()));
                 }
+                Token::Assci => {
+                    let assci = next_string(lex);
+
+                    ctx.push(AstNode::Assci { seq: assci.into_bytes() });
+                }
                 _ => {}
             },
             Err(_) => {
@@ -129,6 +135,12 @@ pub fn register_args(lex: &mut Lexer<'_, Token>) -> (u32, u32, u32) {
     let rs2 = next_reg(lex);
 
     (rd, rs1, rs2)
+}
+
+pub fn next_string(lex: &mut Lexer<'_, Token>) -> String {
+    let s = lex.next().unwrap().unwrap_or_default();
+
+    token_to_string(&s, lex)
 }
 
 pub fn next_in_paren<T, F>(lex: &mut Lexer<'_, Token>, func: F) -> T

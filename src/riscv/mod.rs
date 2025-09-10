@@ -100,9 +100,14 @@ pub fn encode(node: AstNode) -> Vec<u8> {
             imm,
             opcode: 0b0100011,
         }),
+        AstNode::Assci { seq } => {
+            seq
+        }
         _ => Vec::new(),
     }
 }
+
+
 
 fn section_opts(name: &str) -> (&str, SectionKind) {
     match name {

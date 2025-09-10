@@ -23,8 +23,6 @@ pub struct StoreArgs {
     pub funct3: u32,
 }
 
-// 00000000_00000000_00000000_00000000_00000000_00000000_00000000_00000000
-
 pub fn store(arg: StoreArgs) -> Vec<u8> {
     let ins = ((arg.imm & 0x0000000000000FE0) as u32) << 25
         | arg.rs2 << 20

@@ -3,6 +3,12 @@ use logos::Logos;
 #[derive(Logos, Debug, PartialEq, PartialOrd, Ord, Eq)]
 #[logos(skip r"[ \t\n\f,]+")]
 pub enum Token {
+    #[token(".ascii")]
+    Assci,
+
+    #[token(".section")]
+    Section,
+
     #[token("ecall")]
     Ecall,
 
@@ -17,6 +23,9 @@ pub enum Token {
 
     #[token("sub")]
     Sub,
+
+    #[token("mv")]
+    Mv,
 
     #[token("xor")]
     Xor,
@@ -86,17 +95,14 @@ pub enum Token {
     NegNumber(i64),
 
     #[regex(r"'(\\.|[A-Za-z])'", |lex| {
-    let a = lex.slice().trim_matches('\'');
-    let b = match a {
-        r"\n" => "\n",
-        s => s,
-    };
-    b.parse::<char>().unwrap()
-})]
+        let a = lex.slice().trim_matches('\'');
+        let b = match a {
+            r"\n" => "\n",
+            s => s,
+        };
+        b.parse::<char>().unwrap()
+    })]
     Char(char),
-
-    #[token(".section")]
-    Section,
 
     #[regex("#(.*)")]
     Comment,
@@ -105,6 +111,13 @@ pub enum Token {
         lex.slice().replace(":", "").to_string()
     })]
     Label(String),
+
+   
+    #[regex(r#""[A-Za-z_][A-Za-z0-9_]*""#, |lex| {
+        lex.slice().trim_matches('"').to_string()
+    })]
+    Str(String),
+
 
     #[regex(r"\.[A-Za-z_][A-Za-z0-9_]*", |lex| lex.slice().to_string())]
     Name(String),
