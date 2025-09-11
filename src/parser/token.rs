@@ -12,6 +12,9 @@ pub enum Token {
     #[token("ecall")]
     Ecall,
 
+    #[token("lui")]
+    Lui,
+
     #[token("addi")]
     Addi,
 
@@ -112,12 +115,10 @@ pub enum Token {
     })]
     Label(String),
 
-   
     #[regex(r#""[A-Za-z_][A-Za-z0-9_]*""#, |lex| {
         lex.slice().trim_matches('"').to_string()
     })]
     Str(String),
-
 
     #[regex(r"\.[A-Za-z_][A-Za-z0-9_]*", |lex| lex.slice().to_string())]
     Name(String),

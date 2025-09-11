@@ -27,6 +27,7 @@ pub enum AstNode {
     Slt { rd: u32, rs1: u32, rs2: u32 },
     Sltu { rd: u32, rs1: u32, rs2: u32 },
     Sb { rs1: u32, rs2: u32, imm: u64 },
+    Lui { rd: u32, imm: u64 },
     Assci { seq: Vec<u8> },
     Ecall,
 }
@@ -38,6 +39,13 @@ macro_rules! register_fn {
     }};
 }
 
+macro_rules! upper_fn {
+    ($name: ident, $ctx: expr, $lex: expr) => {{
+        let (rd, imm) = upper_args($lex);
+        $ctx.push(AstNode::$name { rd, imm });
+    }};
+}
+
 pub fn nodes_from_tokens(lex: &mut Lexer<'_, Token>, source: String) -> Vec<AstNode> {
     let mut ctx = ParserCtx::new();
 
@@ -45,7 +53,7 @@ pub fn nodes_from_tokens(lex: &mut Lexer<'_, Token>, source: String) -> Vec<AstN
         let span = lex.span();
         let line = source[..span.start].chars().filter(|&c| c == '\n').count() + 1;
         LINE.store(line as u64, Ordering::SeqCst);
-            println!("{:?}", token);
+        println!("{:?}", token);
 
         match token {
             Ok(t) => match t {
@@ -76,6 +84,9 @@ pub fn nodes_from_tokens(lex: &mut Lexer<'_, Token>, source: String) -> Vec<AstN
                 Token::Sra => register_fn!(Sra, ctx, lex),
                 Token::Slt => register_fn!(Slt, ctx, lex),
                 Token::Sltu => register_fn!(Sltu, ctx, lex),
+
+                Token::Lui => upper_fn!(Lui, ctx, lex),
+
                 Token::Sb => {
                     let rs2 = next_reg(lex);
                     let imm = next_num(lex);
@@ -106,9 +117,20 @@ pub fn nodes_from_tokens(lex: &mut Lexer<'_, Token>, source: String) -> Vec<AstN
                 Token::Assci => {
                     let assci = next_string(lex);
 
-                    ctx.push(AstNode::Assci { seq: assci.into_bytes() });
+                    ctx.push(AstNode::Assci {
+                        seq: assci.into_bytes(),
+                    });
                 }
-                _ => {}
+                Token::Comment => {},
+                _ => {
+                    SUCCESS.store(false, Ordering::SeqCst);
+                    println!(
+                        "{}:\n \tFound: {:?}\r\n\tLine: {}",
+                        "Error, Unexpected token".bright_red(),
+                        lex.slice(),
+                        LINE.load(Ordering::Relaxed)
+                    );
+                }
             },
             Err(_) => {
                 SUCCESS.store(false, Ordering::SeqCst);
@@ -135,6 +157,13 @@ pub fn register_args(lex: &mut Lexer<'_, Token>) -> (u32, u32, u32) {
     let rs2 = next_reg(lex);
 
     (rd, rs1, rs2)
+}
+
+pub fn upper_args(lex: &mut Lexer<'_, Token>) -> (u32, u64) {
+    let rd = next_reg(lex);
+    let imm = next_num(lex);
+
+    (rd, imm)
 }
 
 pub fn next_string(lex: &mut Lexer<'_, Token>) -> String {

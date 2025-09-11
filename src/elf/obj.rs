@@ -2,11 +2,12 @@ use std::{collections::HashMap, fs::File, io::Write, path::Path};
 
 use object::{
     Architecture, BinaryFormat, Endianness, SectionKind, SymbolFlags, SymbolKind, SymbolScope,
-    write::{Object, SectionId, Symbol, SymbolId, SymbolSection},
+    write::{Object, Relocation, SectionId, Symbol, SymbolId, SymbolSection},
 };
 
 pub struct Elf<'a> {
     pub sections: HashMap<String, Section>,
+    pub symbols: HashMap<String, SymbolId>,
     pub elf: Object<'a>,
 }
 
@@ -15,6 +16,7 @@ impl<'a> Elf<'a> {
         Self {
             sections: HashMap::new(),
             elf: Object::new(BinaryFormat::Elf, Architecture::Riscv64, Endianness::Little),
+            symbols: HashMap::new(),
         }
     }
     pub fn create_section(&mut self, name: String, kind: SectionKind) -> &mut Section {
@@ -54,7 +56,7 @@ impl<'a> Elf<'a> {
             (section.id, section.tvalue)
         };
 
-        self.elf.add_symbol(Symbol {
+        let id = self.elf.add_symbol(Symbol {
             name: name.as_bytes().to_vec(),
             value: tvalue,
             size: content.len() as u64,
@@ -68,6 +70,8 @@ impl<'a> Elf<'a> {
             },
         });
 
+        self.symbols.insert(name, id);
+
         {
             let section = self.search_section(section_name);
             section.tvalue += content.len() as u64;
@@ -75,8 +79,29 @@ impl<'a> Elf<'a> {
 
         self.write_section(section_id, content, align);
     }
-
-    pub fn reallocate(&mut self) {}
+    pub fn get_symbol_id(&self, name: String) -> SymbolId {
+        *self.symbols.get(&name).expect("Symbol not found")
+    }
+    pub fn reallocate(
+        &mut self,
+        section_id: SectionId,
+        symbol_id: SymbolId,
+        offset: u64,
+        addend: i64,
+        kind: u32,
+    ) {
+        self.elf
+            .add_relocation(
+                section_id,
+                Relocation {
+                    flags: object::RelocationFlags::Elf { r_type: kind },
+                    symbol: symbol_id,
+                    offset,
+                    addend,
+                },
+            )
+            .unwrap();
+    }
     pub fn write(&self, path: &Path) {
         let mut file = File::create(path).unwrap();
         let content = self.elf.write().unwrap();

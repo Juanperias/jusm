@@ -91,7 +91,6 @@ pub fn token_to_string(token: &Token, lex: &mut Lexer<'_, Token>) -> String {
             );
 
             String::new()
- 
         }
     }
 }

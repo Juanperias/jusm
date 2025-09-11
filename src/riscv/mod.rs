@@ -8,7 +8,7 @@ use object::{SectionKind, SymbolKind};
 use crate::{
     elf::obj::Elf,
     parser::ast::AstNode,
-    riscv::encode::{RegArgs, StoreArgs, register, store},
+    riscv::encode::{register, store, upper, RegArgs, StoreArgs, UpperArgs},
 };
 
 use self::encode::{ImmArgs, immediate};
@@ -100,14 +100,15 @@ pub fn encode(node: AstNode) -> Vec<u8> {
             imm,
             opcode: 0b0100011,
         }),
-        AstNode::Assci { seq } => {
-            seq
-        }
+        AstNode::Lui { rd, imm } => upper(UpperArgs {
+            rd,
+            imm,
+            opcode: 0b0110111,
+        }),
+        AstNode::Assci { seq } => seq,
         _ => Vec::new(),
     }
 }
-
-
 
 fn section_opts(name: &str) -> (&str, SectionKind) {
     match name {
@@ -149,7 +150,6 @@ pub fn encode_sections<'a>(sections: Vec<AstNode>) -> Elf<'a> {
             for node in content {
                 match node {
                     AstNode::Label { name, content } => {
-                        println!("{:?}", name);
                         encode_label(&mut elf, &section_name, name, content);
                     }
                     n => opcodes.extend(encode(n)),
