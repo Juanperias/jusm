@@ -8,7 +8,7 @@ use object::{SectionKind, SymbolKind};
 use crate::{
     elf::obj::Elf,
     parser::ast::AstNode,
-    riscv::encode::{register, store, upper, RegArgs, StoreArgs, UpperArgs},
+    riscv::encode::{RegArgs, StoreArgs, UpperArgs, register, store, upper},
 };
 
 use self::encode::{ImmArgs, immediate};
@@ -104,6 +104,11 @@ pub fn encode(node: AstNode) -> Vec<u8> {
             rd,
             imm,
             opcode: 0b0110111,
+        }),
+        AstNode::Auipc { rd, imm } => upper(UpperArgs {
+            rd,
+            imm,
+            opcode: 0b0010111,
         }),
         AstNode::Assci { seq } => seq,
         _ => Vec::new(),

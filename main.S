@@ -10,6 +10,7 @@ _start:
 	addi a7, zero, 64
 	ecall
 
+	auipc a7, 2
 	lui a7, 74565
 
 	addi a0, zero, 0

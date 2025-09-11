@@ -12,6 +12,9 @@ pub enum Token {
     #[token("ecall")]
     Ecall,
 
+    #[token("auipc")]
+    Auipc,
+
     #[token("lui")]
     Lui,
 

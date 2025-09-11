@@ -28,6 +28,7 @@ pub enum AstNode {
     Sltu { rd: u32, rs1: u32, rs2: u32 },
     Sb { rs1: u32, rs2: u32, imm: u64 },
     Lui { rd: u32, imm: u64 },
+    Auipc { rd: u32, imm: u64 },
     Assci { seq: Vec<u8> },
     Ecall,
 }
@@ -86,6 +87,7 @@ pub fn nodes_from_tokens(lex: &mut Lexer<'_, Token>, source: String) -> Vec<AstN
                 Token::Sltu => register_fn!(Sltu, ctx, lex),
 
                 Token::Lui => upper_fn!(Lui, ctx, lex),
+                Token::Auipc => upper_fn!(Auipc, ctx, lex),
 
                 Token::Sb => {
                     let rs2 = next_reg(lex);
@@ -121,7 +123,7 @@ pub fn nodes_from_tokens(lex: &mut Lexer<'_, Token>, source: String) -> Vec<AstN
                         seq: assci.into_bytes(),
                     });
                 }
-                Token::Comment => {},
+                Token::Comment => {}
                 _ => {
                     SUCCESS.store(false, Ordering::SeqCst);
                     println!(

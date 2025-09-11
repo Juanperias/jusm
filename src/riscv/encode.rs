@@ -34,7 +34,6 @@ pub struct UpperArgs {
 pub fn upper(arg: UpperArgs) -> Vec<u8> {
     let ins = ((arg.imm & 0xFFFFF) as u32) << 12 | arg.rd << 7 | arg.opcode;
 
-    println!("{:x}", ins);
     ins.to_le_bytes().to_vec()
 }
 
