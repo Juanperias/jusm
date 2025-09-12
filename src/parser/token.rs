@@ -90,6 +90,9 @@ pub enum Token {
     #[token("sb")]
     Sb,
 
+    #[token("la")]
+    La,
+
     #[regex(r"\d+",  |lex| {
           lex.slice().trim().parse::<u64>().expect("Invalid number")
     })]
@@ -117,6 +120,11 @@ pub enum Token {
         lex.slice().replace(":", "").to_string()
     })]
     Label(String),
+
+    #[regex(r"[A-Za-z_][A-Za-z0-9_]*", |lex| {
+        lex.slice().replace(":", "").to_string()
+    })]
+    Identifier(String),
 
     #[regex(r#""[A-Za-z_][A-Za-z0-9_]*""#, |lex| {
         lex.slice().trim_matches('"').to_string()

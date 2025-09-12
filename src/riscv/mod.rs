@@ -1,9 +1,16 @@
 // note: apply & 0x0FFF to imm in addi
 
 pub mod encode;
-use std::path::Path;
+use std::{
+    path::Path,
+    sync::atomic::{AtomicU64, Ordering},
+};
 
-use object::{SectionKind, SymbolKind};
+use object::{
+    SectionKind, SymbolKind,
+    elf::{R_RISCV_HI20, R_RISCV_LO12_I},
+    write::{SectionId, coff::Symbol},
+};
 
 use crate::{
     elf::obj::Elf,
@@ -13,8 +20,10 @@ use crate::{
 
 use self::encode::{ImmArgs, immediate};
 
-pub fn encode(node: AstNode) -> Vec<u8> {
-    match node {
+static PC: AtomicU64 = AtomicU64::new(0);
+
+pub fn encode(node: AstNode, elf: &mut Elf, section_id: SectionId) -> Vec<u8> {
+    let result = match node {
         AstNode::Ecall => immediate(ImmArgs {
             imm: 0x0,
             rs1: 0x0,
@@ -110,40 +119,87 @@ pub fn encode(node: AstNode) -> Vec<u8> {
             imm,
             opcode: 0b0010111,
         }),
+        AstNode::La { rd, symbol } => {
+            let symbol = elf.get_symbol_id(symbol);
+            let mut opcodes = Vec::new();
+
+            opcodes.extend(upper(UpperArgs {
+                imm: symbol.1,
+                rd,
+                opcode: 0b0110111,
+            }));
+
+            elf.reallocate(
+                section_id,
+                symbol.0,
+                0, //PC.load(Ordering::Relaxed),
+                0,
+                R_RISCV_HI20,
+            );
+
+            println!("{}", PC.load(Ordering::Relaxed));
+
+            PC.fetch_add(4, Ordering::SeqCst);
+
+            opcodes.extend(immediate(ImmArgs {
+                imm: symbol.1 & 0x0fff,
+                rs1: rd,
+                rd,
+                funct3: 0x0,
+                opcode: 0b0010011,
+            }));
+
+            elf.reallocate(
+                section_id,
+                symbol.0,
+                4, //PC.load(Ordering::Relaxed),
+                0,
+                R_RISCV_LO12_I,
+            );
+
+            println!("{}", PC.load(Ordering::Relaxed));
+
+            opcodes
+        }
         AstNode::Assci { seq } => seq,
         _ => Vec::new(),
-    }
+    };
+
+    PC.fetch_add(4, Ordering::SeqCst);
+
+    result
 }
 
-fn section_opts(name: &str) -> (&str, SectionKind) {
+fn section_opts(name: &str) -> (&str, SectionKind, SymbolKind) {
     match name {
-        ".text" => ("text", SectionKind::Text),
-        ".data" => ("data", SectionKind::Data),
-        ".bss" => ("bss", SectionKind::UninitializedData),
-        other => (other, SectionKind::Unknown),
+        ".text" => ("text", SectionKind::Text, SymbolKind::Text),
+        ".data" => ("data", SectionKind::Data, SymbolKind::Data),
+        ".bss" => ("bss", SectionKind::UninitializedData, SymbolKind::Data),
+        other => (other, SectionKind::Unknown, SymbolKind::Section),
     }
 }
 
-fn encode_label(a: &mut Elf, section_name: &str, name: String, content: Vec<AstNode>) {
+fn encode_label(
+    a: &mut Elf,
+    section_name: &str,
+    name: String,
+    content: Vec<AstNode>,
+    kind: SymbolKind,
+) {
     let mut symbol_content = Vec::new();
+    let id = a.search_section(section_name.to_string()).id;
     for node in content {
-        symbol_content.extend(encode(node));
+        symbol_content.extend(encode(node, a, id));
     }
-    a.create_symbol(
-        section_name.to_string(),
-        name,
-        SymbolKind::Text,
-        &symbol_content,
-        4,
-    );
+    a.create_symbol(section_name.to_string(), name, kind, &symbol_content, 4);
 }
 
 pub fn encode_sections<'a>(sections: Vec<AstNode>) -> Elf<'a> {
     let mut elf = Elf::new();
 
-    for section in sections {
+    for section in sections.clone() {
         if let AstNode::Section { name, content } = section {
-            let (sec_name, sec_kind) = section_opts(&name);
+            let (sec_name, sec_kind, sym_kind) = section_opts(&name);
 
             let (id, section_name) = {
                 let s = elf.create_section(sec_name.to_string(), sec_kind);
@@ -155,9 +211,26 @@ pub fn encode_sections<'a>(sections: Vec<AstNode>) -> Elf<'a> {
             for node in content {
                 match node {
                     AstNode::Label { name, content } => {
-                        encode_label(&mut elf, &section_name, name, content);
+                        for c in &content {
+                            // TODO: error if symbol not exists
+                            match c {
+                                AstNode::La { rd, symbol } => {
+                                    if !elf.symbols.contains_key(symbol) {
+                                        if !search_label(symbol, &sections, &mut elf, &section_name)
+                                        {
+                                            panic!("symbol not exist");
+                                        }
+                                    }
+
+                                    // exists
+                                }
+                                _ => {}
+                            }
+                        }
+
+                        encode_label(&mut elf, &section_name, name, content, sym_kind);
                     }
-                    n => opcodes.extend(encode(n)),
+                    n => opcodes.extend(encode(n, &mut elf, id)),
                 }
             }
 
@@ -166,4 +239,40 @@ pub fn encode_sections<'a>(sections: Vec<AstNode>) -> Elf<'a> {
     }
 
     elf
+}
+
+pub fn search_label(
+    label: &String,
+    start_content: &Vec<AstNode>,
+    elf: &mut Elf,
+    section_name: &str,
+) -> bool {
+    for c in start_content {
+        match c {
+            AstNode::Section { name, content } => {
+                println!("{name}");
+                if search_label(label, content, elf, name) {
+                    return true;
+                }
+            }
+            AstNode::Label { name, content } => {
+                if name == label {
+                    let (sec_name, sec_kind, sym_kind) = section_opts(section_name);
+                    if !elf.sections.contains_key(sec_name) {
+                        elf.create_section(sec_name.to_string(), sec_kind);
+                    }
+                    println!("encoding");
+                    println!("{section_name}");
+
+                    println!("{sec_name}");
+                    encode_label(elf, sec_name, label.clone(), content.clone(), sym_kind);
+                    return true;
+                }
+            }
+            //AstNode::La { rd, symbol } => panic!("Double la is not allowed... for now"),
+            _ => {}
+        }
+    }
+
+    false
 }

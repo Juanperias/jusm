@@ -1,7 +1,7 @@
 use std::sync::atomic::{AtomicBool, AtomicU64, Ordering};
 
 use super::token::Token;
-use crate::utils::{check_num, token_to_name, token_to_reg, token_to_string};
+use crate::utils::{check_num, token_to_identifier, token_to_name, token_to_reg, token_to_string};
 use colored::Colorize;
 use logos::Lexer;
 use thiserror::Error;
@@ -29,6 +29,7 @@ pub enum AstNode {
     Sb { rs1: u32, rs2: u32, imm: u64 },
     Lui { rd: u32, imm: u64 },
     Auipc { rd: u32, imm: u64 },
+    La { rd: u32, symbol: String },
     Assci { seq: Vec<u8> },
     Ecall,
 }
@@ -76,6 +77,12 @@ pub fn nodes_from_tokens(lex: &mut Lexer<'_, Token>, source: String) -> Vec<AstN
                         rs1: 0,
                         imm: 0,
                     });
+                }
+                Token::La => {
+                    let rd = next_reg(lex);
+                    let symbol = next_identifier(lex);
+
+                    ctx.push(AstNode::La { rd, symbol });
                 }
                 Token::Sub => register_fn!(Sub, ctx, lex),
                 Token::Add => register_fn!(Add, ctx, lex),
@@ -209,6 +216,12 @@ pub fn next_name(lex: &mut Lexer<'_, Token>) -> String {
     let name = lex.next().unwrap().unwrap_or_default();
 
     token_to_name(&name, lex)
+}
+
+pub fn next_identifier(lex: &mut Lexer<'_, Token>) -> String {
+    let ident = lex.next().unwrap().unwrap_or_default();
+
+    token_to_identifier(&ident, lex)
 }
 
 pub fn next_num(lex: &mut Lexer<'_, Token>) -> u64 {

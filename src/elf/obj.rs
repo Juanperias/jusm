@@ -7,7 +7,7 @@ use object::{
 
 pub struct Elf<'a> {
     pub sections: HashMap<String, Section>,
-    pub symbols: HashMap<String, SymbolId>,
+    pub symbols: HashMap<String, (SymbolId, u64)>,
     pub elf: Object<'a>,
 }
 
@@ -61,16 +61,22 @@ impl<'a> Elf<'a> {
             value: tvalue,
             size: content.len() as u64,
             kind,
-            scope: SymbolScope::Linkage,
+            scope: match name.clone().as_str() {
+                "msg" => SymbolScope::Compilation,
+                _ => SymbolScope::Linkage,
+            },
             weak: false,
             section: SymbolSection::Section(section_id),
             flags: SymbolFlags::Elf {
-                st_info: 0x12,
+                st_info: match name.clone().as_str() {
+                    "msg" => 0x02,
+                    _ => 0x13,
+                },
                 st_other: 0x0,
             },
         });
 
-        self.symbols.insert(name, id);
+        self.symbols.insert(name, (id, tvalue));
 
         {
             let section = self.search_section(section_name);
@@ -79,7 +85,7 @@ impl<'a> Elf<'a> {
 
         self.write_section(section_id, content, align);
     }
-    pub fn get_symbol_id(&self, name: String) -> SymbolId {
+    pub fn get_symbol_id(&self, name: String) -> (SymbolId, u64) {
         *self.symbols.get(&name).expect("Symbol not found")
     }
     pub fn reallocate(
