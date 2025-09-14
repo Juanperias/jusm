@@ -132,10 +132,14 @@ pub fn encode(node: AstNode, elf: &mut Elf, section_id: SectionId) -> Vec<u8> {
             elf.reallocate(
                 section_id,
                 symbol.0,
-                PC.load(Ordering::Relaxed) - 4, // WHY? Because PC always refer to the next instruction and we need the previus instruction
+                PC.load(Ordering::Relaxed) - 4,
                 0,
                 R_RISCV_HI20,
             );
+
+            println!("{:x}", PC.load(Ordering::Relaxed) - 4);
+
+            PC.fetch_add(4, std::sync::atomic::Ordering::SeqCst);
 
             opcodes.extend(immediate(ImmArgs {
                 imm: symbol.1 & 0x0fff,
@@ -152,6 +156,7 @@ pub fn encode(node: AstNode, elf: &mut Elf, section_id: SectionId) -> Vec<u8> {
                 0,
                 R_RISCV_LO12_I,
             );
+            println!("{:x}", PC.load(Ordering::Relaxed) - 4);
 
             opcodes
         }

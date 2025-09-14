@@ -5,10 +5,12 @@ _start:
 
 	addi a0, zero, 1
 
-	addi a2, zero, 4
+	addi a2, zero, 6
+	la a1, msg
+
 
 	addi a7, zero, 64
-	la a1, msg
+
 	ecall
 
 	addi a0, zero, 0
