@@ -132,14 +132,10 @@ pub fn encode(node: AstNode, elf: &mut Elf, section_id: SectionId) -> Vec<u8> {
             elf.reallocate(
                 section_id,
                 symbol.0,
-                0, //PC.load(Ordering::Relaxed),
+                PC.load(Ordering::Relaxed) - 4, // WHY? Because PC always refer to the next instruction and we need the previus instruction
                 0,
                 R_RISCV_HI20,
             );
-
-            println!("{}", PC.load(Ordering::Relaxed));
-
-            PC.fetch_add(4, Ordering::SeqCst);
 
             opcodes.extend(immediate(ImmArgs {
                 imm: symbol.1 & 0x0fff,
@@ -152,12 +148,10 @@ pub fn encode(node: AstNode, elf: &mut Elf, section_id: SectionId) -> Vec<u8> {
             elf.reallocate(
                 section_id,
                 symbol.0,
-                4, //PC.load(Ordering::Relaxed),
+                PC.load(Ordering::Relaxed) - 4,
                 0,
                 R_RISCV_LO12_I,
             );
-
-            println!("{}", PC.load(Ordering::Relaxed));
 
             opcodes
         }

@@ -131,6 +131,7 @@ pub enum Token {
     })]
     Str(String),
 
+    // todo: improve this regex to allow more characters
     #[regex(r"\.[A-Za-z_][A-Za-z0-9_]*", |lex| lex.slice().to_string())]
     Name(String),
 
