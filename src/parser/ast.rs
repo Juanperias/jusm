@@ -1,4 +1,4 @@
-use std::sync::atomic::{AtomicBool, AtomicU64, Ordering};
+use std::{collections::HashMap, sync::atomic::{AtomicBool, AtomicU64, Ordering}};
 
 use super::token::Token;
 use crate::utils::{check_num, token_to_identifier, token_to_name, token_to_reg, token_to_string};
@@ -48,7 +48,8 @@ macro_rules! upper_fn {
     }};
 }
 
-pub fn nodes_from_tokens(lex: &mut Lexer<'_, Token>, source: String) -> Vec<AstNode> {
+
+pub fn nodes_from_tokens(lex: &mut Lexer<'_, Token>, source: String) -> (Vec<AstNode>, HashMap<String, Visibility>) {
     let mut ctx = ParserCtx::new();
 
     while let Some(token) = lex.next() {
@@ -68,15 +69,19 @@ pub fn nodes_from_tokens(lex: &mut Lexer<'_, Token>, source: String) -> Vec<AstN
 
                     ctx.push(AstNode::Addi { rd, rs1, imm });
                 }
-                Token::Ecall => {
-                    ctx.push(AstNode::Ecall);
-                }
+                Token::Ecall => ctx.push(AstNode::Ecall),
+
                 Token::Nop => {
                     ctx.push(AstNode::Addi {
                         rd: 0,
                         rs1: 0,
                         imm: 0,
                     });
+                }
+                Token::Global => {
+                    let name = next_identifier(lex);
+
+                    ctx.push_visibility(name, Visibility::Global);
                 }
                 Token::La => {
                     let rd = next_reg(lex);
@@ -120,7 +125,7 @@ pub fn nodes_from_tokens(lex: &mut Lexer<'_, Token>, source: String) -> Vec<AstN
                     }
 
                     let name = next_name(lex);
-                    println!("{name}");
+
                     ctx.current_section = Some((name, Vec::new()));
                 }
                 Token::Assci => {
@@ -152,6 +157,8 @@ pub fn nodes_from_tokens(lex: &mut Lexer<'_, Token>, source: String) -> Vec<AstN
             }
         }
     }
+    
+    ctx.push_label();
 
     if !SUCCESS.load(Ordering::Relaxed) {
         panic!("Invalid syntax");
@@ -234,6 +241,13 @@ pub struct ParserCtx {
     pub nodes: Vec<AstNode>,
     pub current_section: Option<(String, Vec<AstNode>)>,
     pub current_label: Option<(String, Vec<AstNode>)>,
+    pub functions_visibility: HashMap<String, Visibility>
+}
+
+#[derive(Clone, Copy, Debug)]
+pub enum Visibility {
+    Global,
+    Local,
 }
 
 impl ParserCtx {
@@ -242,7 +256,11 @@ impl ParserCtx {
             nodes: Vec::new(),
             current_section: None,
             current_label: None,
+            functions_visibility: HashMap::new(),
         }
+    }
+    pub fn push_visibility(&mut self, name: String, visibility: Visibility) {
+        self.functions_visibility.insert(name, visibility);
     }
     pub fn push(&mut self, node: AstNode) {
         if self.current_label.is_some() {
@@ -265,12 +283,10 @@ impl ParserCtx {
             self.push(AstNode::Label {
                 name: curr.0.clone(),
                 content: curr.1.clone(),
-            })
+            });
         }
     }
-    pub fn get(&mut self) -> &Vec<AstNode> {
-        self.push_label();
-
+    pub fn get(mut self) -> (Vec<AstNode>, HashMap<String, Visibility>) {
         if self.current_section.is_some() {
             let current = self.current_section.as_ref().unwrap();
             self.nodes.push(AstNode::Section {
@@ -279,6 +295,6 @@ impl ParserCtx {
             });
         }
 
-        self.nodes.as_ref()
+        (self.nodes, self.functions_visibility)
     }
 }

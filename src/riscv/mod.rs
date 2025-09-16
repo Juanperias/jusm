@@ -2,6 +2,7 @@
 
 pub mod encode;
 use std::{
+    collections::HashMap,
     path::Path,
     sync::atomic::{AtomicU64, Ordering},
 };
@@ -14,7 +15,7 @@ use object::{
 
 use crate::{
     elf::obj::Elf,
-    parser::ast::AstNode,
+    parser::ast::{AstNode, Visibility},
     riscv::encode::{RegArgs, StoreArgs, UpperArgs, register, store, upper},
 };
 
@@ -23,6 +24,8 @@ use self::encode::{ImmArgs, immediate};
 static PC: AtomicU64 = AtomicU64::new(0);
 
 pub fn encode(node: AstNode, elf: &mut Elf, section_id: SectionId) -> Vec<u8> {
+    let base = PC.load(Ordering::SeqCst);
+
     let result = match node {
         AstNode::Ecall => immediate(ImmArgs {
             imm: 0x0,
@@ -31,6 +34,7 @@ pub fn encode(node: AstNode, elf: &mut Elf, section_id: SectionId) -> Vec<u8> {
             funct3: 0x0,
             opcode: 0b1110011,
         }),
+
         AstNode::Addi { rd, rs1, imm } => immediate(ImmArgs {
             imm: imm & 0x0fff,
             rs1,
@@ -38,6 +42,7 @@ pub fn encode(node: AstNode, elf: &mut Elf, section_id: SectionId) -> Vec<u8> {
             funct3: 0x0,
             opcode: 0b0010011,
         }),
+
         AstNode::Sub { rd, rs1, rs2 } => register(RegArgs {
             rs1,
             rs2,
@@ -46,6 +51,7 @@ pub fn encode(node: AstNode, elf: &mut Elf, section_id: SectionId) -> Vec<u8> {
             funct3: 0x0,
             opcode: 0b0110011,
         }),
+
         AstNode::Sll { rd, rs1, rs2 } => register(RegArgs {
             rs1,
             rs2,
@@ -54,6 +60,7 @@ pub fn encode(node: AstNode, elf: &mut Elf, section_id: SectionId) -> Vec<u8> {
             funct3: 0x1,
             opcode: 0b0110011,
         }),
+
         AstNode::Srl { rd, rs1, rs2 } => register(RegArgs {
             rs1,
             rs2,
@@ -62,6 +69,7 @@ pub fn encode(node: AstNode, elf: &mut Elf, section_id: SectionId) -> Vec<u8> {
             funct3: 0x5,
             opcode: 0b0110011,
         }),
+
         AstNode::Sra { rd, rs1, rs2 } => register(RegArgs {
             rs1,
             rs2,
@@ -70,6 +78,7 @@ pub fn encode(node: AstNode, elf: &mut Elf, section_id: SectionId) -> Vec<u8> {
             funct3: 0x5,
             opcode: 0b0110011,
         }),
+
         AstNode::Slt { rd, rs1, rs2 } => register(RegArgs {
             rs1,
             rs2,
@@ -78,6 +87,7 @@ pub fn encode(node: AstNode, elf: &mut Elf, section_id: SectionId) -> Vec<u8> {
             funct3: 0x2,
             opcode: 0b0110011,
         }),
+
         AstNode::Sltu { rd, rs1, rs2 } => register(RegArgs {
             rs1,
             rs2,
@@ -86,6 +96,7 @@ pub fn encode(node: AstNode, elf: &mut Elf, section_id: SectionId) -> Vec<u8> {
             funct3: 0x3,
             opcode: 0b0110011,
         }),
+
         AstNode::Xor { rd, rs1, rs2 } => register(RegArgs {
             rd,
             rs1,
@@ -94,6 +105,7 @@ pub fn encode(node: AstNode, elf: &mut Elf, section_id: SectionId) -> Vec<u8> {
             funct3: 0x4,
             opcode: 0b0110011,
         }),
+
         AstNode::Add { rd, rs1, rs2 } => register(RegArgs {
             rs1,
             rs2,
@@ -102,6 +114,7 @@ pub fn encode(node: AstNode, elf: &mut Elf, section_id: SectionId) -> Vec<u8> {
             funct7: 0,
             opcode: 0b0110011,
         }),
+
         AstNode::Sb { rs1, rs2, imm } => store(StoreArgs {
             rs1,
             rs2,
@@ -109,65 +122,55 @@ pub fn encode(node: AstNode, elf: &mut Elf, section_id: SectionId) -> Vec<u8> {
             imm,
             opcode: 0b0100011,
         }),
+
         AstNode::Lui { rd, imm } => upper(UpperArgs {
             rd,
             imm,
             opcode: 0b0110111,
         }),
+
         AstNode::Auipc { rd, imm } => upper(UpperArgs {
             rd,
             imm,
             opcode: 0b0010111,
         }),
-        AstNode::La { rd, symbol } => {
-            let symbol = elf.get_symbol_id(symbol);
-            let mut opcodes = Vec::new();
 
-            opcodes.extend(upper(UpperArgs {
-                imm: symbol.1,
-                rd,
-                opcode: 0b0110111,
-            }));
+        AstNode::La { rd, ref symbol } => {
+            let (sym_id, sym_val) = elf.get_symbol_id(symbol.to_owned());
+            let mut ops = Vec::new();
 
-            elf.reallocate(
-                section_id,
-                symbol.0,
-                PC.load(Ordering::Relaxed) - 4,
-                0,
-                R_RISCV_HI20,
-            );
 
-            println!("{:x}", PC.load(Ordering::Relaxed) - 4);
+            println!("{:x}", base);
+            ops.extend(upper(UpperArgs { imm: sym_val, rd, opcode: 0b0110111 }));
+            elf.reallocate(section_id, sym_id, base, 0, R_RISCV_HI20);
 
-            PC.fetch_add(4, std::sync::atomic::Ordering::SeqCst);
+            PC.fetch_add(4, Ordering::SeqCst);
 
-            opcodes.extend(immediate(ImmArgs {
-                imm: symbol.1 & 0x0fff,
-                rs1: rd,
-                rd,
-                funct3: 0x0,
-                opcode: 0b0010011,
-            }));
+            let base = PC.load(Ordering::SeqCst);
 
-            elf.reallocate(
-                section_id,
-                symbol.0,
-                PC.load(Ordering::Relaxed) - 4,
-                0,
-                R_RISCV_LO12_I,
-            );
-            println!("{:x}", PC.load(Ordering::Relaxed) - 4);
+            println!("{:x}", base);
 
-            opcodes
+            ops.extend(immediate(ImmArgs { imm: sym_val & 0x0fff, rs1: rd, rd, funct3: 0x0, opcode: 0b0010011 }));
+
+            elf.reallocate(section_id, sym_id, base, 0, R_RISCV_LO12_I);
+ 
+
+
+            ops
         }
-        AstNode::Assci { seq } => seq,
+
+        AstNode::Assci { ref seq } => seq.to_vec(),
+
         _ => Vec::new(),
     };
-
-    PC.fetch_add(4, Ordering::SeqCst);
-
+    
+    if !matches!(node, AstNode::Assci { .. }) {
+        PC.fetch_add(4, Ordering::SeqCst);
+    }
+  
     result
 }
+
 
 fn section_opts(name: &str) -> (&str, SectionKind, SymbolKind) {
     match name {
@@ -184,16 +187,27 @@ fn encode_label(
     name: String,
     content: Vec<AstNode>,
     kind: SymbolKind,
+    visibility: Visibility,
 ) {
     let mut symbol_content = Vec::new();
     let id = a.search_section(section_name.to_string()).id;
     for node in content {
         symbol_content.extend(encode(node, a, id));
     }
-    a.create_symbol(section_name.to_string(), name, kind, &symbol_content, 4);
+    a.create_symbol(
+        section_name.to_string(),
+        name,
+        kind,
+        &symbol_content,
+        4,
+        visibility,
+    );
 }
 
-pub fn encode_sections<'a>(sections: Vec<AstNode>) -> Elf<'a> {
+pub fn encode_sections<'a>(
+    sections: Vec<AstNode>,
+    visibility_map: HashMap<String, Visibility>,
+) -> Elf<'a> {
     let mut elf = Elf::new();
 
     for section in sections.clone() {
@@ -210,13 +224,20 @@ pub fn encode_sections<'a>(sections: Vec<AstNode>) -> Elf<'a> {
             for node in content {
                 match node {
                     AstNode::Label { name, content } => {
+                        let visiblity = visibility_map.get(&name).unwrap_or(&Visibility::Local);
+
                         for c in &content {
                             // TODO: error if symbol not exists
                             match c {
                                 AstNode::La { rd, symbol } => {
                                     if !elf.symbols.contains_key(symbol) {
-                                        if !search_label(symbol, &sections, &mut elf, &section_name)
-                                        {
+                                        if !search_label_encode(
+                                            symbol,
+                                            &sections,
+                                            &mut elf,
+                                            &section_name,
+                                            &visibility_map,
+                                        ) {
                                             panic!("symbol not exist");
                                         }
                                     }
@@ -227,7 +248,7 @@ pub fn encode_sections<'a>(sections: Vec<AstNode>) -> Elf<'a> {
                             }
                         }
 
-                        encode_label(&mut elf, &section_name, name, content, sym_kind);
+                        encode_label(&mut elf, &section_name, name, content, sym_kind, *visiblity);
                     }
                     n => opcodes.extend(encode(n, &mut elf, id)),
                 }
@@ -240,17 +261,18 @@ pub fn encode_sections<'a>(sections: Vec<AstNode>) -> Elf<'a> {
     elf
 }
 
-pub fn search_label(
+pub fn search_label_encode(
     label: &String,
     start_content: &Vec<AstNode>,
     elf: &mut Elf,
     section_name: &str,
+    visibility_map: &HashMap<String, Visibility>,
 ) -> bool {
     for c in start_content {
         match c {
             AstNode::Section { name, content } => {
                 println!("{name}");
-                if search_label(label, content, elf, name) {
+                if search_label_encode(label, content, elf, name, visibility_map) {
                     return true;
                 }
             }
@@ -260,11 +282,9 @@ pub fn search_label(
                     if !elf.sections.contains_key(sec_name) {
                         elf.create_section(sec_name.to_string(), sec_kind);
                     }
-                    println!("encoding");
-                    println!("{section_name}");
+                    let v = visibility_map.get(name).unwrap_or(&Visibility::Local);
 
-                    println!("{sec_name}");
-                    encode_label(elf, sec_name, label.clone(), content.clone(), sym_kind);
+                    encode_label(elf, sec_name, label.clone(), content.clone(), sym_kind, *v);
                     return true;
                 }
             }

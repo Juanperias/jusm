@@ -5,6 +5,8 @@ use object::{
     write::{Object, Relocation, SectionId, Symbol, SymbolId, SymbolSection},
 };
 
+use crate::parser::ast::Visibility;
+
 pub struct Elf<'a> {
     pub sections: HashMap<String, Section>,
     pub symbols: HashMap<String, (SymbolId, u64)>,
@@ -50,27 +52,34 @@ impl<'a> Elf<'a> {
         kind: SymbolKind,
         content: &[u8],
         align: u64,
+        visibility: Visibility,
     ) {
         let (section_id, tvalue) = {
             let section = self.search_section(section_name.clone());
             (section.id, section.tvalue)
         };
 
+        if self.symbols.contains_key(&name) {
+            return;
+        }
+
+        println!("{:?} {}", visibility, name);
+
         let id = self.elf.add_symbol(Symbol {
             name: name.as_bytes().to_vec(),
             value: tvalue,
             size: content.len() as u64,
             kind,
-            scope: match name.clone().as_str() {
-                "msg" => SymbolScope::Compilation,
-                _ => SymbolScope::Linkage,
+            scope: match visibility {
+                Visibility::Local => SymbolScope::Compilation,
+                Visibility::Global => SymbolScope::Linkage,
             },
             weak: false,
             section: SymbolSection::Section(section_id),
             flags: SymbolFlags::Elf {
-                st_info: match name.clone().as_str() {
-                    "msg" => 0x02,
-                    _ => 0x13,
+                st_info: match visibility {
+                    Visibility::Local => 0x10,
+                    Visibility::Global => 0x12,
                 },
                 st_other: 0x0,
             },

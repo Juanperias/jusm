@@ -15,6 +15,9 @@ pub enum Token {
     #[token("auipc")]
     Auipc,
 
+    #[token(".global")]
+    Global,
+
     #[token("lui")]
     Lui,
 
@@ -126,7 +129,6 @@ pub enum Token {
     })]
     Identifier(String),
 
-    // todo: improve this regex to allow more characters
     #[regex(r#""[A-Za-z_][A-Za-z0-9_]*""#, |lex| {
         lex.slice().trim_matches('"').to_string()
     })]
