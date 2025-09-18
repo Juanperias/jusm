@@ -36,7 +36,7 @@ pub fn encode(node: AstNode, elf: &mut Elf, section_id: SectionId) -> Vec<u8> {
         }),
 
         AstNode::Addi { rd, rs1, imm } => immediate(ImmArgs {
-            imm: imm & 0x0fff,
+            imm: imm,
             rs1,
             rd,
             funct3: 0x0,
@@ -150,7 +150,7 @@ pub fn encode(node: AstNode, elf: &mut Elf, section_id: SectionId) -> Vec<u8> {
 
             println!("{:x}", base);
 
-            ops.extend(immediate(ImmArgs { imm: sym_val & 0x0fff, rs1: rd, rd, funct3: 0x0, opcode: 0b0010011 }));
+            ops.extend(immediate(ImmArgs { imm: sym_val, rs1: rd, rd, funct3: 0x0, opcode: 0b0010011 }));
 
             elf.reallocate(section_id, sym_id, base, 0, R_RISCV_LO12_I);
  

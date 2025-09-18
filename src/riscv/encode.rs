@@ -53,7 +53,7 @@ pub fn store(arg: StoreArgs) -> Vec<u8> {
 }
 
 pub fn immediate(arg: ImmArgs) -> Vec<u8> {
-    let ins = ((arg.imm as u32) << 20)
+    let ins = (((arg.imm & 0x0fff) as u32) << 20)
         | arg.rs1 << 15
         | arg.funct3 << 12
         | (arg.rd as u32) << 7
