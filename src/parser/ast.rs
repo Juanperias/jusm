@@ -78,7 +78,7 @@ pub fn nodes_from_tokens(lex: &mut Lexer<'_, Token>, source: String) -> (Vec<Ast
                         imm: 0,
                     });
                 }
-                Token::Global => {
+                Token::Global | Token::Globl => {
                     let name = next_identifier(lex);
 
                     ctx.push_visibility(name, Visibility::Global);

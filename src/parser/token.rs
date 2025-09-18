@@ -18,6 +18,9 @@ pub enum Token {
     #[token(".global")]
     Global,
 
+    #[token(".globl")]
+    Globl,
+
     #[token("lui")]
     Lui,
 
