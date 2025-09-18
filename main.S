@@ -24,6 +24,9 @@ _start:
 	addi a7, zero, 93
 	ecall
 
+.global other
+.weak other
+
 other:
 	nop
 

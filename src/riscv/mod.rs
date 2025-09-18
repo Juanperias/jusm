@@ -15,7 +15,7 @@ use object::{
 
 use crate::{
     elf::obj::Elf,
-    parser::ast::{AstNode, Visibility},
+    parser::ast::{AstNode, SymbolInfo, Visibility},
     riscv::encode::{RegArgs, StoreArgs, UpperArgs, register, store, upper},
 };
 
@@ -139,9 +139,12 @@ pub fn encode(node: AstNode, elf: &mut Elf, section_id: SectionId) -> Vec<u8> {
             let (sym_id, sym_val) = elf.get_symbol_id(symbol.to_owned());
             let mut ops = Vec::new();
 
-
             println!("{:x}", base);
-            ops.extend(upper(UpperArgs { imm: sym_val, rd, opcode: 0b0110111 }));
+            ops.extend(upper(UpperArgs {
+                imm: sym_val,
+                rd,
+                opcode: 0b0110111,
+            }));
             elf.reallocate(section_id, sym_id, base, 0, R_RISCV_HI20);
 
             PC.fetch_add(4, Ordering::SeqCst);
@@ -150,11 +153,15 @@ pub fn encode(node: AstNode, elf: &mut Elf, section_id: SectionId) -> Vec<u8> {
 
             println!("{:x}", base);
 
-            ops.extend(immediate(ImmArgs { imm: sym_val, rs1: rd, rd, funct3: 0x0, opcode: 0b0010011 }));
+            ops.extend(immediate(ImmArgs {
+                imm: sym_val,
+                rs1: rd,
+                rd,
+                funct3: 0x0,
+                opcode: 0b0010011,
+            }));
 
             elf.reallocate(section_id, sym_id, base, 0, R_RISCV_LO12_I);
- 
-
 
             ops
         }
@@ -163,14 +170,13 @@ pub fn encode(node: AstNode, elf: &mut Elf, section_id: SectionId) -> Vec<u8> {
 
         _ => Vec::new(),
     };
-    
+
     if !matches!(node, AstNode::Assci { .. }) {
         PC.fetch_add(4, Ordering::SeqCst);
     }
-  
+
     result
 }
-
 
 fn section_opts(name: &str) -> (&str, SectionKind, SymbolKind) {
     match name {
@@ -187,7 +193,7 @@ fn encode_label(
     name: String,
     content: Vec<AstNode>,
     kind: SymbolKind,
-    visibility: Visibility,
+    symbol_info: &SymbolInfo,
 ) {
     let mut symbol_content = Vec::new();
     let id = a.search_section(section_name.to_string()).id;
@@ -200,13 +206,13 @@ fn encode_label(
         kind,
         &symbol_content,
         4,
-        visibility,
+        symbol_info,
     );
 }
 
 pub fn encode_sections<'a>(
     sections: Vec<AstNode>,
-    visibility_map: HashMap<String, Visibility>,
+    visibility_map: HashMap<String, SymbolInfo>,
 ) -> Elf<'a> {
     let mut elf = Elf::new();
 
@@ -224,7 +230,10 @@ pub fn encode_sections<'a>(
             for node in content {
                 match node {
                     AstNode::Label { name, content } => {
-                        let visiblity = visibility_map.get(&name).unwrap_or(&Visibility::Local);
+                        let tmp = SymbolInfo {
+                            ..Default::default()
+                        };
+                        let visiblity = visibility_map.get(&name).unwrap_or(&tmp);
 
                         for c in &content {
                             // TODO: error if symbol not exists
@@ -248,7 +257,7 @@ pub fn encode_sections<'a>(
                             }
                         }
 
-                        encode_label(&mut elf, &section_name, name, content, sym_kind, *visiblity);
+                        encode_label(&mut elf, &section_name, name, content, sym_kind, visiblity);
                     }
                     n => opcodes.extend(encode(n, &mut elf, id)),
                 }
@@ -266,7 +275,7 @@ pub fn search_label_encode(
     start_content: &Vec<AstNode>,
     elf: &mut Elf,
     section_name: &str,
-    visibility_map: &HashMap<String, Visibility>,
+    visibility_map: &HashMap<String, SymbolInfo>,
 ) -> bool {
     for c in start_content {
         match c {
@@ -282,9 +291,12 @@ pub fn search_label_encode(
                     if !elf.sections.contains_key(sec_name) {
                         elf.create_section(sec_name.to_string(), sec_kind);
                     }
-                    let v = visibility_map.get(name).unwrap_or(&Visibility::Local);
+                    let tmp = SymbolInfo {
+                        ..Default::default()
+                    };
+                    let v = visibility_map.get(name).unwrap_or(&tmp);
 
-                    encode_label(elf, sec_name, label.clone(), content.clone(), sym_kind, *v);
+                    encode_label(elf, sec_name, label.clone(), content.clone(), sym_kind, v);
                     return true;
                 }
             }

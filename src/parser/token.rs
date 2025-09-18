@@ -18,6 +18,9 @@ pub enum Token {
     #[token(".global")]
     Global,
 
+    #[token(".weak")]
+    Weak,
+
     #[token(".globl")]
     Globl,
 

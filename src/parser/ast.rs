@@ -1,4 +1,7 @@
-use std::{collections::HashMap, sync::atomic::{AtomicBool, AtomicU64, Ordering}};
+use std::{
+    collections::HashMap,
+    sync::atomic::{AtomicBool, AtomicU64, Ordering},
+};
 
 use super::token::Token;
 use crate::utils::{check_num, token_to_identifier, token_to_name, token_to_reg, token_to_string};
@@ -48,8 +51,10 @@ macro_rules! upper_fn {
     }};
 }
 
-
-pub fn nodes_from_tokens(lex: &mut Lexer<'_, Token>, source: String) -> (Vec<AstNode>, HashMap<String, Visibility>) {
+pub fn nodes_from_tokens(
+    lex: &mut Lexer<'_, Token>,
+    source: String,
+) -> (Vec<AstNode>, HashMap<String, SymbolInfo>) {
     let mut ctx = ParserCtx::new();
 
     while let Some(token) = lex.next() {
@@ -81,7 +86,12 @@ pub fn nodes_from_tokens(lex: &mut Lexer<'_, Token>, source: String) -> (Vec<Ast
                 Token::Global | Token::Globl => {
                     let name = next_identifier(lex);
 
-                    ctx.push_visibility(name, Visibility::Global);
+                    ctx.set_visibility(name, Visibility::Global);
+                }
+                Token::Weak => {
+                    let name = next_identifier(lex);
+
+                    ctx.set_weakness(name, true);
                 }
                 Token::La => {
                     let rd = next_reg(lex);
@@ -157,14 +167,14 @@ pub fn nodes_from_tokens(lex: &mut Lexer<'_, Token>, source: String) -> (Vec<Ast
             }
         }
     }
-    
+
     ctx.push_label();
 
     if !SUCCESS.load(Ordering::Relaxed) {
         panic!("Invalid syntax");
     }
 
-    ctx.get().clone()
+    ctx.get()
 }
 
 pub fn register_args(lex: &mut Lexer<'_, Token>) -> (u32, u32, u32) {
@@ -241,7 +251,22 @@ pub struct ParserCtx {
     pub nodes: Vec<AstNode>,
     pub current_section: Option<(String, Vec<AstNode>)>,
     pub current_label: Option<(String, Vec<AstNode>)>,
-    pub functions_visibility: HashMap<String, Visibility>
+    pub functions_info: HashMap<String, SymbolInfo>,
+}
+
+#[derive(Debug)]
+pub struct SymbolInfo {
+    pub visibility: Visibility,
+    pub weak: bool,
+}
+
+impl Default for SymbolInfo {
+    fn default() -> Self {
+        Self {
+            visibility: Visibility::Local,
+            weak: false,
+        }
+    }
 }
 
 #[derive(Clone, Copy, Debug)]
@@ -256,12 +281,39 @@ impl ParserCtx {
             nodes: Vec::new(),
             current_section: None,
             current_label: None,
-            functions_visibility: HashMap::new(),
+            functions_info: HashMap::new(),
         }
     }
-    pub fn push_visibility(&mut self, name: String, visibility: Visibility) {
-        self.functions_visibility.insert(name, visibility);
+    pub fn set_visibility(&mut self, name: String, visibility: Visibility) {
+        if !self.functions_info.contains_key(&name) {
+            self.functions_info.insert(
+                name,
+                SymbolInfo {
+                    visibility,
+                    ..Default::default()
+                },
+            );
+
+            return;
+        }
+
+        self.functions_info.get_mut(&name).unwrap().visibility = visibility;
     }
+    pub fn set_weakness(&mut self, name: String, weak: bool) {
+        if !self.functions_info.contains_key(&name) {
+            self.functions_info.insert(
+                name,
+                SymbolInfo {
+                    weak,
+                    ..Default::default()
+                },
+            );
+            return;
+        }
+
+        self.functions_info.get_mut(&name).unwrap().weak = weak;
+    }
+
     pub fn push(&mut self, node: AstNode) {
         if self.current_label.is_some() {
             self.current_label.as_mut().unwrap().1.push(node);
@@ -286,7 +338,7 @@ impl ParserCtx {
             });
         }
     }
-    pub fn get(mut self) -> (Vec<AstNode>, HashMap<String, Visibility>) {
+    pub fn get(mut self) -> (Vec<AstNode>, HashMap<String, SymbolInfo>) {
         if self.current_section.is_some() {
             let current = self.current_section.as_ref().unwrap();
             self.nodes.push(AstNode::Section {
@@ -295,6 +347,6 @@ impl ParserCtx {
             });
         }
 
-        (self.nodes, self.functions_visibility)
+        (self.nodes, self.functions_info)
     }
 }
