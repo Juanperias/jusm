@@ -16,8 +16,7 @@ pub static SUCCESS: AtomicBool = AtomicBool::new(true);
 #[derive(Debug, Error)]
 pub enum AstError {}
 
-#[derive(Debug, Clone)]
-pub enum AstNode {
+pub enum AstNod {
     Section { name: String, content: Vec<AstNode> },
     Label { name: String, content: Vec<AstNode> },
     Addi { rd: u32, rs1: u32, imm: u64 },
@@ -32,10 +31,66 @@ pub enum AstNode {
     Sb { rs1: u32, rs2: u32, imm: u64 },
     Lui { rd: u32, imm: u64 },
     Auipc { rd: u32, imm: u64 },
-    La { rd: u32, symbol: String },
-    Assci { seq: Vec<u8> },
     Ecall,
 }
+
+
+// thanks to: https://github.com/Brayan-724/amrisk, for the original macro
+
+macro_rules! generate_nodes {
+    (
+        $(
+            $name:ident => [$($arg:ident),*]
+        ),* $(,)?
+    ) => {
+        #[derive(Debug, Clone)]
+        pub enum AstNode {
+            $(
+                $name {
+                    $(
+                        #[doc = stringify!($arg)]
+                        $arg: generate_nodes!(@arg_ty $arg),
+                    )*
+                },
+            )*
+            Section { name: String, content: Vec<AstNode> },
+            Label { name: String, content: Vec<AstNode> },
+            Assci { seq: Vec<u8> },
+
+        }
+    };
+
+    (@arg_ty rd) => { u32 };
+    (@arg_ty rs1) => { u32 };
+    (@arg_ty rs2) => { u32 };
+    (@arg_ty imm) => { u64 };
+    (@arg_ty symbol) => { String };
+}
+
+generate_nodes! {
+    Addi => [rd, rs1, imm],
+    Sub => [rd, rs1, rs2],
+    Add => [rd, rs1, rs2],
+    Xor => [rd, rs1, rs2],
+    Sll => [rd, rs1, rs2],
+    Srl => [rd, rs1, rs2],
+    Sra => [rd, rs1, rs2],
+    Slt => [rd, rs1, rs2],
+    Sltu => [rd, rs1, rs2],
+
+    La => [rd, symbol],
+
+    Lui => [rd, imm],
+    Auipc => [rd, imm],
+
+    Sb => [rs2, rs1, imm],
+
+    Ecall => [],
+}
+
+
+
+
 
 macro_rules! register_fn {
     ($name:ident, $ctx:expr, $lex:expr) => {{
@@ -62,7 +117,7 @@ pub fn nodes_from_tokens(
         let line = source[..span.start].chars().filter(|&c| c == '\n').count() + 1;
         LINE.store(line as u64, Ordering::SeqCst);
         println!("{:?}", token);
-
+ 
         match token {
             Ok(t) => match t {
                 Token::Addi => {
@@ -74,13 +129,13 @@ pub fn nodes_from_tokens(
 
                     ctx.push(AstNode::Addi { rd, rs1, imm });
                 }
-                Token::Ecall => ctx.push(AstNode::Ecall),
+                Token::Ecall => ctx.push(AstNode::Ecall {  }),
 
                 Token::Nop => {
                     ctx.push(AstNode::Addi {
                         rd: 0,
                         rs1: 0,
-                        imm: 0,
+                        imm: 0
                     });
                 }
                 Token::Global | Token::Globl => {

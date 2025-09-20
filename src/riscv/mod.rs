@@ -27,7 +27,7 @@ pub fn encode(node: AstNode, elf: &mut Elf, section_id: SectionId) -> Vec<u8> {
     let base = PC.load(Ordering::SeqCst);
 
     let result = match node {
-        AstNode::Ecall => immediate(ImmArgs {
+        AstNode::Ecall {} => immediate(ImmArgs {
             imm: 0x0,
             rs1: 0x0,
             rd: 0x0,
