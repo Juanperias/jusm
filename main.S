@@ -7,11 +7,14 @@ _start:
 
 	addi a2, zero, 6
 	la a1, msg
-
-
 	addi a7, zero, 64
 
 	ecall
+
+	addi sp, sp, 16
+	addi a1, zero, 0
+	sb a1, 0(sp)
+	addi sp, sp, -16
 
 	addi a0, zero, 1
 	addi a2, zero, 9

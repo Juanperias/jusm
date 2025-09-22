@@ -115,8 +115,8 @@ pub fn encode(node: AstNode, elf: &mut Elf, section_id: SectionId) -> Vec<u8> {
             opcode: 0b0110011,
         }),
 
-        AstNode::Sb { rs1, rs2, imm } => store(StoreArgs {
-            rs1,
+        AstNode::Sb { paren_rs1, rs2, imm } => store(StoreArgs {
+            rs1: paren_rs1,
             rs2,
             funct3: 0,
             imm,

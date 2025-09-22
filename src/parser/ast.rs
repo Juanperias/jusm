@@ -16,25 +16,6 @@ pub static SUCCESS: AtomicBool = AtomicBool::new(true);
 #[derive(Debug, Error)]
 pub enum AstError {}
 
-pub enum AstNod {
-    Section { name: String, content: Vec<AstNode> },
-    Label { name: String, content: Vec<AstNode> },
-    Addi { rd: u32, rs1: u32, imm: u64 },
-    Add { rd: u32, rs1: u32, rs2: u32 },
-    Sub { rd: u32, rs1: u32, rs2: u32 },
-    Xor { rd: u32, rs1: u32, rs2: u32 },
-    Sll { rd: u32, rs1: u32, rs2: u32 },
-    Srl { rd: u32, rs1: u32, rs2: u32 },
-    Sra { rd: u32, rs1: u32, rs2: u32 },
-    Slt { rd: u32, rs1: u32, rs2: u32 },
-    Sltu { rd: u32, rs1: u32, rs2: u32 },
-    Sb { rs1: u32, rs2: u32, imm: u64 },
-    Lui { rd: u32, imm: u64 },
-    Auipc { rd: u32, imm: u64 },
-    Ecall,
-}
-
-
 // thanks to: https://github.com/Brayan-724/amrisk, for the original macro
 
 macro_rules! generate_nodes {
@@ -56,130 +37,57 @@ macro_rules! generate_nodes {
             Section { name: String, content: Vec<AstNode> },
             Label { name: String, content: Vec<AstNode> },
             Assci { seq: Vec<u8> },
-
         }
-    };
-
-    (@arg_ty rd) => { u32 };
-    (@arg_ty rs1) => { u32 };
-    (@arg_ty rs2) => { u32 };
-    (@arg_ty imm) => { u64 };
-    (@arg_ty symbol) => { String };
-}
-
-generate_nodes! {
-    Addi => [rd, rs1, imm],
-    Sub => [rd, rs1, rs2],
-    Add => [rd, rs1, rs2],
-    Xor => [rd, rs1, rs2],
-    Sll => [rd, rs1, rs2],
-    Srl => [rd, rs1, rs2],
-    Sra => [rd, rs1, rs2],
-    Slt => [rd, rs1, rs2],
-    Sltu => [rd, rs1, rs2],
-
-    La => [rd, symbol],
-
-    Lui => [rd, imm],
-    Auipc => [rd, imm],
-
-    Sb => [rs2, rs1, imm],
-
-    Ecall => [],
-}
 
 
+        pub fn nodes_from_tokens(lex: &mut Lexer<'_, Token>, source: String)
+            -> (Vec<AstNode>, HashMap<String, SymbolInfo>) {
 
+            let mut ctx = ParserCtx::new();
 
+            while let Some(token) = lex.next() {
+                let span = lex.span();
+                let line = source[..span.start].chars().filter(|&c| c == '\n').count() + 1;
+                LINE.store(line as u64, Ordering::SeqCst);
 
-macro_rules! register_fn {
-    ($name:ident, $ctx:expr, $lex:expr) => {{
-        let (rd, rs1, rs2) = register_args($lex);
-        $ctx.push(AstNode::$name { rd, rs1, rs2 });
-    }};
-}
+                match token {
+                    Ok(t) => match t {
+                        $(
+                            Token::$name => {
+                                $(
+                                  let $arg = generate_nodes!(@fn_ty $arg, lex);
+                                )*
 
-macro_rules! upper_fn {
-    ($name: ident, $ctx: expr, $lex: expr) => {{
-        let (rd, imm) = upper_args($lex);
-        $ctx.push(AstNode::$name { rd, imm });
-    }};
-}
+                                ctx.push(AstNode::$name {
+                                    $(
+                                        $arg,
+                                    )*
+                                });
+                             },
+                        )*
+                        Token::Global | Token::Globl => {
+                            let name = next_identifier(lex);
 
-pub fn nodes_from_tokens(
-    lex: &mut Lexer<'_, Token>,
-    source: String,
-) -> (Vec<AstNode>, HashMap<String, SymbolInfo>) {
-    let mut ctx = ParserCtx::new();
+                            ctx.set_visibility(name, Visibility::Global);
+                        }
+                        Token::Weak => {
+                            let name = next_identifier(lex);
 
-    while let Some(token) = lex.next() {
-        let span = lex.span();
-        let line = source[..span.start].chars().filter(|&c| c == '\n').count() + 1;
-        LINE.store(line as u64, Ordering::SeqCst);
-        println!("{:?}", token);
- 
-        match token {
-            Ok(t) => match t {
-                Token::Addi => {
-                    let rd = next_reg(lex);
-
-                    let rs1 = next_reg(lex);
-
-                    let imm = next_num(lex);
-
-                    ctx.push(AstNode::Addi { rd, rs1, imm });
-                }
-                Token::Ecall => ctx.push(AstNode::Ecall {  }),
-
-                Token::Nop => {
-                    ctx.push(AstNode::Addi {
-                        rd: 0,
-                        rs1: 0,
-                        imm: 0
-                    });
-                }
-                Token::Global | Token::Globl => {
-                    let name = next_identifier(lex);
-
-                    ctx.set_visibility(name, Visibility::Global);
-                }
-                Token::Weak => {
-                    let name = next_identifier(lex);
-
-                    ctx.set_weakness(name, true);
-                }
-                Token::La => {
-                    let rd = next_reg(lex);
-                    let symbol = next_identifier(lex);
-
-                    ctx.push(AstNode::La { rd, symbol });
-                }
-                Token::Sub => register_fn!(Sub, ctx, lex),
-                Token::Add => register_fn!(Add, ctx, lex),
-                Token::Xor => register_fn!(Xor, ctx, lex),
-                Token::Sll => register_fn!(Sll, ctx, lex),
-                Token::Srl => register_fn!(Srl, ctx, lex),
-                Token::Sra => register_fn!(Sra, ctx, lex),
-                Token::Slt => register_fn!(Slt, ctx, lex),
-                Token::Sltu => register_fn!(Sltu, ctx, lex),
-
-                Token::Lui => upper_fn!(Lui, ctx, lex),
-                Token::Auipc => upper_fn!(Auipc, ctx, lex),
-
-                Token::Sb => {
-                    let rs2 = next_reg(lex);
-                    let imm = next_num(lex);
-
-                    let rs1 = next_in_paren(lex, next_reg);
-
-                    ctx.push(AstNode::Sb { rs2, rs1, imm });
-                }
-                Token::Label(s) => {
+                            ctx.set_weakness(name, true);
+                        }
+                        Token::Nop => {
+                            ctx.push(AstNode::Addi {
+                                rd: 0,
+                                rs1: 0,
+                                imm: 0
+                            });
+                        }
+                         Token::Label(s) => {
                     ctx.push_label();
 
                     ctx.current_label = Some((s, Vec::new()));
                 }
-                Token::Section => {
+                          Token::Section => {
                     if ctx.current_section.is_some() {
                         ctx.push_label();
                         let current = ctx.current_section.unwrap();
@@ -201,51 +109,79 @@ pub fn nodes_from_tokens(
                     });
                 }
                 Token::Comment => {}
-                _ => {
-                    SUCCESS.store(false, Ordering::SeqCst);
+                    _ => {
+                         SUCCESS.store(false, Ordering::SeqCst);
                     println!(
                         "{}:\n \tFound: {:?}\r\n\tLine: {}",
                         "Error, Unexpected token".bright_red(),
                         lex.slice(),
                         LINE.load(Ordering::Relaxed)
                     );
+                    },
+                    },
+                    Err(_) => {
+                        SUCCESS.store(false, Ordering::SeqCst);
+                        println!(
+                            "{}:\n \tFound: {:?}\r\n\tLine: {}",
+                            "Error, Invalid Token".bright_red(),
+                            lex.slice(),
+                            LINE.load(Ordering::Relaxed)
+                        );
+
+                    },
                 }
-            },
-            Err(_) => {
-                SUCCESS.store(false, Ordering::SeqCst);
-                println!(
-                    "{}:\n \tFound: {:?}\r\n\tLine: {}",
-                    "Error, Invalid Token".bright_red(),
-                    lex.slice(),
-                    LINE.load(Ordering::Relaxed)
-                );
+
             }
+
+            ctx.push_label();
+
+            if !SUCCESS.load(Ordering::Relaxed) {
+                panic!("Invalid syntax");
+            }
+
+            ctx.get()
         }
-    }
+    };
 
-    ctx.push_label();
 
-    if !SUCCESS.load(Ordering::Relaxed) {
-        panic!("Invalid syntax");
-    }
+    (@fn_ty rd, $lex: expr) => { next_reg($lex) };
+    (@fn_ty rs1, $lex: expr) => { next_reg($lex) };
+    (@fn_ty rs2, $lex: expr) => { next_reg($lex) };
+    (@fn_ty imm, $lex: expr) => { next_num($lex) };
+    (@fn_ty symbol, $lex: expr) => { next_identifier($lex) };
+    (@fn_ty paren_rs1, $lex: expr) => { next_in_paren($lex, next_reg) };
 
-    ctx.get()
+    (@arg_ty rd) => { u32 };
+    (@arg_ty paren_rs1) => { u32 };
+    (@arg_ty rs1) => { u32 };
+    (@arg_ty rs2) => { u32 };
+    (@arg_ty imm) => { u64 };
+    (@arg_ty symbol) => { String };
 }
 
-pub fn register_args(lex: &mut Lexer<'_, Token>) -> (u32, u32, u32) {
-    let rd = next_reg(lex);
-    let rs1 = next_reg(lex);
-    let rs2 = next_reg(lex);
 
-    (rd, rs1, rs2)
+// original macro by https://github.com/Brayan-724/amrisk
+generate_nodes! {
+    Addi => [rd, rs1, imm],
+    Sub => [rd, rs1, rs2],
+    Add => [rd, rs1, rs2],
+    Xor => [rd, rs1, rs2],
+    Sll => [rd, rs1, rs2],
+    Srl => [rd, rs1, rs2],
+    Sra => [rd, rs1, rs2],
+    Slt => [rd, rs1, rs2],
+    Sltu => [rd, rs1, rs2],
+
+    La => [rd, symbol],
+
+    Lui => [rd, imm],
+    Auipc => [rd, imm],
+
+    Sb => [rs2, imm, paren_rs1],
+
+    Ecall => [],
 }
 
-pub fn upper_args(lex: &mut Lexer<'_, Token>) -> (u32, u64) {
-    let rd = next_reg(lex);
-    let imm = next_num(lex);
-
-    (rd, imm)
-}
 
 pub fn next_string(lex: &mut Lexer<'_, Token>) -> String {
     let s = lex.next().unwrap().unwrap_or_default();
