@@ -4,7 +4,7 @@
 
 _start:
 	addi a0, zero, 1
-
+	la a1, test
 	addi a2, zero, 6
 	la a1, msg
 	addi a7, zero, 64
@@ -26,6 +26,10 @@ _start:
 	addi a0, zero, 0
 	addi a7, zero, 93
 	ecall
+
+test:
+   la a0, msg
+   nop
 
 .global other
 .weak other

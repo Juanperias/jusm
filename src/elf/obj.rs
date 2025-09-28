@@ -13,6 +13,11 @@ pub struct Elf<'a> {
     pub elf: Object<'a>,
 }
 
+// new
+// create_section -> SectionId
+// create_symbol -> SymbolId
+//
+
 impl<'a> Elf<'a> {
     pub fn new() -> Self {
         Self {
