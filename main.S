@@ -8,7 +8,7 @@ _start:
 	addi a2, zero, 6
 	la a1, msg
 	addi a7, zero, 64
-
+	addi x10, x0, 20
 	ecall
 
 	addi sp, sp, 16
@@ -28,7 +28,6 @@ _start:
 	ecall
 
 test:
-   la a0, msg
    nop
 
 .global other

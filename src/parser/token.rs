@@ -1,23 +1,19 @@
 use logos::Logos;
 
-
 #[derive(Logos, Debug, PartialEq, PartialOrd, Ord, Eq)]
 #[logos(skip r"[ \t\n\f,]+")]
 pub enum Token {
     // Ins
     //
     // I Type
-    
     #[token("addi")]
     Addi,
 
     #[token("ecall")]
     Ecall,
 
-
     // R Type
     //
-
     #[token("add")]
     Add,
 
@@ -56,7 +52,6 @@ pub enum Token {
     Sb,
 
     // U type
-
     #[token("auipc")]
     Auipc,
 
@@ -217,7 +212,7 @@ pub enum Token {
 
     #[token("s7")]
     S7,
-    
+
     #[token("x24")]
     X24,
 
@@ -235,7 +230,7 @@ pub enum Token {
 
     #[token("s10")]
     S10,
-    
+
     #[token("x27")]
     X27,
 
@@ -270,7 +265,6 @@ pub enum Token {
     #[token(".ascii")]
     Assci,
 
-      
     #[regex(r"\d+",  |lex| {
           lex.slice().trim().parse::<u64>().expect("Invalid number")
     })]
@@ -293,13 +287,10 @@ pub enum Token {
     })]
     Char(char),
 
-    #[regex(r#"[A-Za-z_][A-Za-z0-9_]*""#, |lex| {
+    #[regex(r#""[A-Za-z_][A-Za-z0-9_]*""#, |lex| {
         lex.slice().trim_matches('"').to_string()
     })]
     Str(String),
-
-
-
 
     // ELF
     #[token(".section")]
@@ -338,12 +329,9 @@ pub enum Token {
     #[regex("#(.*)")]
     Comment,
 
-
-
     Empty,
 }
 
-  
 impl Default for Token {
     fn default() -> Self {
         Self::Empty

@@ -159,7 +159,6 @@ macro_rules! generate_nodes {
     (@arg_ty symbol) => { String };
 }
 
-
 // original macro by https://github.com/Brayan-724/amrisk
 generate_nodes! {
     Addi => [rd, rs1, imm],
@@ -181,7 +180,6 @@ generate_nodes! {
 
     Ecall => [],
 }
-
 
 pub fn next_string(lex: &mut Lexer<'_, Token>) -> String {
     let s = lex.next().unwrap().unwrap_or_default();
