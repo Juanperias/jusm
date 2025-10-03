@@ -11,7 +11,7 @@ use crate::parser::ast::{SymbolInfo, Visibility};
 pub struct Elf<'a> {
     pub elf: Object<'a>,
     pub values: HashMap<SectionId, u64>,
-    pub symbols: HashMap<String, (SymbolId, SectionId)>
+    pub symbols: HashMap<String, SymbolData>
 }
 
 pub struct CreateSectionInfo {
@@ -21,6 +21,13 @@ pub struct CreateSectionInfo {
     pub symbol_kind: SymbolKind,
     pub symbol_info: &'static SymbolInfo,
     pub align: u64,
+}
+
+#[derive(Clone, Copy, Debug)]
+pub struct SymbolData {
+    pub symbol_id: SymbolId,
+    pub section_id: SectionId,
+    pub offset: u64,
 }
 
 #[derive(Error, Debug)]
@@ -50,19 +57,20 @@ impl<'a> Elf<'a> {
     pub fn write_section(&mut self, id: SectionId, content: &[u8], align: u64) {
         self.elf.section_mut(id).append_data(content, align);
     }
-    pub fn get_symbol(&self, name: &String) -> Result<&(SymbolId, SectionId), ElfError> {
+    pub fn get_symbol(&self, name: &String) -> Result<&SymbolData, ElfError> {
        match self.symbols.get(name) {
             Some(v) => Ok(v),
             None => Err(ElfError::SymbolNotExists(name.clone())),
        } 
     }
     pub fn create_symbol(&mut self, info: CreateSectionInfo) -> SymbolId {
+        // TODO: replace this with an error.
+        let value = {
+            *self.values.get(&info.section_id).expect("Section not found")
+        };
         let id = self.elf.add_symbol(Symbol {
             name: info.name.as_bytes().to_vec(),
-            value: *self
-                .values
-                .get(&info.section_id)
-                .expect("Section not found"),
+            value: value,
             size: info.content.len() as u64,
             weak: info.symbol_info.weak,
             kind: info.symbol_kind,
@@ -79,7 +87,14 @@ impl<'a> Elf<'a> {
 
         self.write_section(info.section_id, info.content, info.align);
 
-        self.symbols.insert(info.name.to_string(), (id, info.section_id));
+        self.symbols.insert(info.name.to_string(), SymbolData {
+            symbol_id: id,
+            section_id: info.section_id,
+            offset: value,
+        });
+
+        *self.values.get_mut(&info.section_id).expect("Expected symbol") += info.content.len() as u64;
+        
 
         id
     }

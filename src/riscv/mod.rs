@@ -8,9 +8,7 @@ use std::{
 };
 
 use object::{
-    SectionKind, SymbolKind,
-    elf::{R_RISCV_HI20, R_RISCV_LO12_I},
-    write::{SectionId, coff::Symbol},
+    elf::{R_RISCV_HI20, R_RISCV_LO12_I}, write::{coff::Symbol, Relocation, SectionId}, SectionKind, SymbolKind
 };
 
 use crate::{
@@ -140,17 +138,25 @@ pub fn encode(node: AstNode, elf: &mut Elf, section_id: SectionId) -> Vec<u8> {
         }),
 
         AstNode::La { rd, ref symbol } => {
-            let (sym_id, sym_val) = elf.get_symbol_id(symbol.to_owned());
+            let sym_data = { 
+                elf.get_symbol(&symbol).unwrap().to_owned()
+            };
             let mut ops = Vec::new();
 
             println!("{:x}", base);
             ops.extend(upper(UpperArgs {
-                imm: sym_val,
+                imm: sym_data.offset,
                 rd,
                 opcode: 0b0110111,
             }));
-            elf.reallocate(section_id, sym_id, base, 0, R_RISCV_HI20);
-
+           
+            elf.create_reallocation(sym_data.section_id, Relocation {
+                offset: base,
+                symbol: sym_data.symbol_id,
+                addend: 0,
+                flags: object::RelocationFlags::Elf { r_type: R_RISCV_HI20 }
+            });
+ 
             PC.fetch_add(4, Ordering::SeqCst);
 
             let base = PC.load(Ordering::SeqCst);
@@ -158,14 +164,19 @@ pub fn encode(node: AstNode, elf: &mut Elf, section_id: SectionId) -> Vec<u8> {
             println!("{:x}", base);
 
             ops.extend(immediate(ImmArgs {
-                imm: sym_val,
+                imm: sym_data.offset,
                 rs1: rd,
                 rd,
                 funct3: 0x0,
                 opcode: 0b0010011,
             }));
 
-            elf.reallocate(section_id, sym_id, base, 0, R_RISCV_LO12_I);
+            elf.create_reallocation(sym_data.section_id, Relocation {
+                offset: base,
+                symbol: sym_data.symbol_id,
+                addend: 0,
+                flags: object::RelocationFlags::Elf { r_type: R_RISCV_LO12_I }
+            });
 
             ops
         }
