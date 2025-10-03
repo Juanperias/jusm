@@ -47,8 +47,6 @@ pub fn store(arg: StoreArgs) -> Vec<u8> {
         | ((arg.imm & 0x000000000000001F) as u32) << 7
         | arg.opcode;
 
-    PC.fetch_add(4, std::sync::atomic::Ordering::SeqCst);
-
     ins.to_le_bytes().to_vec()
 }
 

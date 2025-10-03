@@ -35,7 +35,7 @@ fn main() {
     let nodes = nodes_from_tokens(&mut t, code.clone());
     println!("{:#?}", nodes);
     let elf = riscv::encode_sections(nodes.0, nodes.1);
-
+    
     println!("{}", cli.output);
     elf.write(&Path::new(&cli.output));
 }

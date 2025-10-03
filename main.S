@@ -23,12 +23,16 @@ _start:
 	addi a7, zero, 64
 	ecall
 
+	addi a10, zero, 10
+	addi x10, x0, 10
+
 	addi a0, zero, 0
 	addi a7, zero, 93
 	ecall
 
 test:
    nop
+
 
 .global other
 .weak other
